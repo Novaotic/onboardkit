@@ -1,0 +1,28 @@
+# Install on Fedora (adjust paths and user):
+#   sudo cp deploy/systemd/onboardkit.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now onboardkit
+#
+# App reads .env from WorkingDirectory via python-dotenv (load_dotenv in main.py).
+# Run as a dedicated unprivileged user; ensure that user owns the app dir and can write presets.json and config.json.
+
+[Unit]
+Description=OnboardKit (FastAPI / Uvicorn)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=onboardkit
+Group=onboardkit
+WorkingDirectory=/opt/onboardkit
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/onboardkit/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8001 --workers 2
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

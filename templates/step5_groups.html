@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Step 5 — Groups & Fax{% endblock %}
+
+{% block content %}
+<div class="card__header">
+  <h1 class="card__title">Email Groups &amp; Mailboxes</h1>
+  <p class="card__subtitle">Specify distribution groups, shared mailboxes, and fax number access. Groups pre-filled by role can be edited freely.</p>
+</div>
+
+<form method="post" action="/step/5">
+
+  <div class="form-group">
+    <label for="email_groups">
+      Email Distribution Groups
+      <span class="hint">(comma-separated)</span>
+      {% if data.get('email_groups') %}<span class="badge badge--preset">Role Default</span>{% endif %}
+    </label>
+    <textarea id="email_groups" name="email_groups" rows="3"
+              placeholder="{{ placeholders.email_groups }}">{{ data.get('email_groups', '') }}</textarea>
+  </div>
+
+  <div class="form-section">
+    <h2 class="form-section__title">Shared Mailboxes</h2>
+    <div class="checkbox-grid">
+      {% for value, label in mailbox_options %}
+      <label class="checkbox-label {% if value in preset_mailboxes %}preset-item{% endif %}">
+        <input type="checkbox" name="mailboxes" value="{{ value }}"
+               {% if value in data.get('mailboxes', []) %}checked{% endif %}>
+        <span>{{ label }}</span>
+        {% if value in preset_mailboxes %}<span class="badge badge--preset">Role Default</span>{% endif %}
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if show_role_followup and role_followup %}
+  <div class="form-group form-group--required">
+    <label>{{ role_followup.label }}</label>
+    <div class="radio-group">
+      <label class="radio-label">
+        <input type="radio" name="role_followup" value="yes"
+               {% if data.get('role_followup') == true %}checked{% endif %}>
+        Yes
+      </label>
+      <label class="radio-label">
+        <input type="radio" name="role_followup" value="no"
+               {% if data.get('role_followup') == false %}checked{% endif %}>
+        No
+      </label>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="form-group">
+    <label for="fax_numbers">Fax Numbers to Grant Access <span class="hint">(one per line)</span></label>
+    <textarea id="fax_numbers" name="fax_numbers" rows="3"
+              placeholder="{{ placeholders.fax_numbers }}">{{ data.get('fax_numbers', '') }}</textarea>
+  </div>
+
+  <div class="form-nav">
+    <a href="/step/4" class="btn btn--secondary">&#8592; Back</a>
+    <button type="submit" class="btn btn--primary">Next: Security &#8594;</button>
+  </div>
+
+</form>
+{% endblock %}

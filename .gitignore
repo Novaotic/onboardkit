@@ -1,0 +1,14 @@
+# Local configuration and secrets
+.env
+config.json
+presets.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/

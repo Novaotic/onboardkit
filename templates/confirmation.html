@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Review Request{% endblock %}
+
+{% block content %}
+<div class="card__header">
+  <h1 class="card__title">Review &amp; Submit</h1>
+  <p class="card__subtitle">
+    Please review the request below. Click <strong>Send to {{ it_team_label }}</strong> when everything looks correct.
+    You can go back to any step by clicking the <strong>Back</strong> button.
+  </p>
+</div>
+
+{% set emp = final.employee %}
+{% set loc = final.location %}
+{% set hw  = final.hardware %}
+{% set acc = final.access %}
+{% set eg  = final.email_groups %}
+{% set sec = final.security %}
+
+<div class="review-grid">
+
+  <div class="review-section">
+    <div class="review-section__header">
+      <span class="review-section__icon">&#128100;</span>
+      <h2>Employee</h2>
+      <a href="/step/1" class="review-edit-link">Edit</a>
+    </div>
+    <dl class="review-dl">
+      <dt>Name</dt>
+      <dd>{{ emp.first_name }} {% if emp.middle_name %}{{ emp.middle_name }} {% endif %}{{ emp.last_name }}
+          {% if emp.preferred_name %}<span class="hint">(prefers: {{ emp.preferred_name }})</span>{% endif %}
+          {% if emp.credentials %}, {{ emp.credentials }}{% endif %}
+      </dd>
+      <dt>Title</dt><dd>{{ emp.title }}</dd>
+      <dt>Start Date</dt><dd>{{ emp.start_date }}</dd>
+      <dt>Requested By</dt><dd>{{ final.requested_by }}</dd>
+      {% if emp.is_student_or_resident is defined %}
+      <dt>{{ employee_fields.student_or_resident.label }}</dt><dd>{{ "Yes" if emp.is_student_or_resident else "No" }}</dd>
+      {% endif %}
+      {% if emp.is_bilingual is defined %}
+      <dt>{{ employee_fields.bilingual.label }}</dt><dd>{{ "Yes" if emp.is_bilingual else "No" }}</dd>
+      {% endif %}
+    </dl>
+  </div>
+
+  <div class="review-section">
+    <div class="review-section__header">
+      <span class="review-section__icon">&#128205;</span>
+      <h2>Location</h2>
+      <a href="/step/2" class="review-edit-link">Edit</a>
+    </div>
+    <dl class="review-dl">
+      <dt>Office</dt><dd>{{ loc.office or "—" }}</dd>
+      <dt>Area</dt><dd>{{ loc.area or "—" }}</dd>
+    </dl>
+  </div>
+
+  <div class="review-section">
+    <div class="review-section__header">
+      <span class="review-section__icon">&#128187;</span>
+      <h2>Hardware</h2>
+      <a href="/step/3" class="review-edit-link">Edit</a>
+    </div>
+    <dl class="review-dl">
+      <dt>Needs Computer</dt><dd>{{ "Yes" if hw.needs_computer else "No" }}</dd>
+      {% if hw.needs_computer %}
+      <dt>Type</dt><dd>{{ hw.computer_type.title() if hw.computer_type else "—" }}</dd>
+      <dt>Monitors</dt><dd>{{ hw.monitors.replace("_"," ").title() if hw.monitors else "—" }}</dd>
+      <dt>Peripherals</dt>
+      <dd>
+        {% if hw.peripherals %}
+          {% for p in hw.peripherals %}<span class="tag">{{ p.replace("_"," ").title() }}</span>{% endfor %}
+        {% else %}None{% endif %}
+      </dd>
+      {% endif %}
+    </dl>
+  </div>
+
+  <div class="review-section">
+    <div class="review-section__header">
+      <span class="review-section__icon">&#128290;</span>
+      <h2>Software &amp; Access</h2>
+      <a href="/step/4" class="review-edit-link">Edit</a>
+    </div>
+    <dl class="review-dl">
+      <dt>Email Access</dt><dd>{{ "Yes" if acc.needs_email else "No" }}</dd>
+      <dt>Software</dt>
+      <dd>
+        {% if acc.software %}
+          {% for s in acc.software %}<span class="tag">{{ software_labels.get(s, s) }}</span>{% endfor %}
+        {% else %}None{% endif %}
+        {% if acc.other_software %}<span class="tag tag--other">{{ acc.other_software }}</span>{% endif %}
+      </dd>
+      <dt>Portal Access</dt>
+      <dd>
+        {% if acc.portals %}
+          {% for p in acc.portals %}<span class="tag">{{ portal_labels.get(p, p) }}</span>{% endfor %}
+        {% else %}None{% endif %}
+      </dd>
+      <dt>Mobile Access</dt><dd>{{ "Yes" if acc.mobile_access else "No" }}</dd>
+      <dt>Network Printers</dt><dd>{{ acc.network_printers or "—" }}</dd>
+    </dl>
+  </div>
+
+  <div class="review-section">
+    <div class="review-section__header">
+      <span class="review-section__icon">&#128231;</span>
+      <h2>Groups &amp; Fax</h2>
+      <a href="/step/5" class="review-edit-link">Edit</a>
+    </div>
+    <dl class="review-dl">
+      <dt>Email Groups</dt><dd>{{ eg.groups or "—" }}</dd>
+      <dt>Shared Mailboxes</dt>
+      <dd>
+        {% if eg.mailboxes %}
+          {% for m in eg.mailboxes %}<span class="tag">{{ mailbox_labels.get(m, m) }}</span>{% endfor %}
+        {% else %}None{% endif %}
+      </dd>
+      {% if eg.role_followup is defined and role_followup %}
+      <dt>{{ role_followup.label }}</dt><dd>{{ "Yes" if eg.role_followup else "No" }}</dd>
+      {% endif %}
+      <dt>Fax Numbers</dt><dd>{{ eg.fax_numbers or "—" }}</dd>
+    </dl>
+  </div>
+
+  <div class="review-section">
+    <div class="review-section__header">
+      <span class="review-section__icon">&#128274;</span>
+      <h2>Security</h2>
+      <a href="/step/6" class="review-edit-link">Edit</a>
+    </div>
+    <dl class="review-dl">
+      <dt>Alarm Code</dt>
+      <dd>{{ "Yes" if sec.alarm_code else "No" }}
+        {% if sec.alarm_code and sec.alarm_facilities %}
+          — {% for f in sec.alarm_facilities %}<span class="tag">{{ f.replace("_"," ").title() }}</span>{% endfor %}
+        {% endif %}
+      </dd>
+      <dt>Gate Access</dt><dd>{{ "Yes" if sec.gate_access else "No" }}</dd>
+    </dl>
+  </div>
+
+</div>
+
+<details class="json-details">
+  <summary>View raw JSON payload</summary>
+  <pre class="json-pre"><code>{{ json_data }}</code></pre>
+</details>
+
+<form method="post" action="/submit">
+  <div class="form-nav form-nav--submit">
+    <a href="/step/6" class="btn btn--secondary">&#8592; Back</a>
+    <button type="submit" class="btn btn--success btn--large">
+      &#9993; Send to {{ it_team_label }}
+    </button>
+  </div>
+</form>
+
+{% endblock %}

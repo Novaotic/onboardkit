@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="home-hero">
+  <h1 class="home-hero__title">New Hire IT Request</h1>
+  <p class="home-hero__lead">
+    {{ tagline or "Submit one guided form for hardware, software, email groups, and access. Your role preset fills in the right defaults—you can adjust before sending." }}
+  </p>
+  <div class="home-hero__actions">
+    <a class="btn btn--primary btn--large" href="/start">Start new hire request</a>
+  </div>
+  <p class="home-hero__note">
+    Already started? Your answers are saved in this browser session until you submit or start a new request.
+  </p>
+</div>
+
+<ul class="home-points" aria-label="What to expect">
+  <li class="home-points__item">
+    <span class="home-points__icon" aria-hidden="true">&#128203;</span>
+    <div>
+      <strong>Six quick steps</strong>
+      <span class="home-points__sub">Employee info, location, hardware, software, groups, security</span>
+    </div>
+  </li>
+  <li class="home-points__item">
+    <span class="home-points__icon" aria-hidden="true">&#9881;</span>
+    <div>
+      <strong>Role-based presets</strong>
+      <span class="home-points__sub">{{ it_team_label }} gets a clear checklist tailored to the hire's role</span>
+    </div>
+  </li>
+  <li class="home-points__item">
+    <span class="home-points__icon" aria-hidden="true">&#9993;</span>
+    <div>
+      <strong>Email to your team</strong>
+      <span class="home-points__sub">Submit sends the completed request to {{ it_team_label }}</span>
+    </div>
+  </li>
+</ul>
+{% endblock %}

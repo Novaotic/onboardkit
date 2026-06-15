@@ -1,0 +1,204 @@
+from urllib.parse import unquote
+
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+
+from auth import authenticate_user, admin_auth_uses_env_fallback
+from config_store import get_offices, get_preset_flags, template_context
+from deps import require_admin
+from preset_store import get_presets, save_presets
+
+router = APIRouter(prefix="/admin", tags=["admin"])
+templates = Jinja2Templates(directory="templates")
+
+
+def _form_options() -> dict:
+    ctx = template_context()
+    return {
+        "hardware_options": ctx["hardware_options"],
+        "software_options": ctx["software_options"],
+        "portal_options": ctx["portal_options"],
+        "mailbox_options": ctx["mailbox_options"],
+        "office_options": ctx["offices"],
+        "preset_flags": ctx["preset_flags"],
+    }
+
+
+def _parse_preset_form(form) -> dict:
+    def _csv_to_list(raw: str) -> list[str]:
+        return [v.strip() for v in raw.split(",") if v.strip()]
+
+    hardware = []
+    computer_type = form.get("computer_type", "")
+    monitors = form.get("monitors", "")
+    if computer_type:
+        hardware.append(computer_type)
+    if monitors:
+        hardware.append(monitors)
+    hardware += list(form.getlist("peripherals"))
+
+    location_email_groups: dict[str, list[str]] = {}
+    for office in get_offices():
+        raw = form.get(f"loc_groups_{office}", "")
+        groups = _csv_to_list(raw)
+        if groups:
+            location_email_groups[office] = groups
+
+    preset: dict = {
+        "hardware": hardware,
+        "software": list(form.getlist("software")),
+        "portals": list(form.getlist("portals")),
+        "mailboxes": list(form.getlist("mailboxes")),
+        "email_groups": _csv_to_list(form.get("email_groups", "")),
+        "location_email_groups": location_email_groups,
+        "mobile_access": form.get("mobile_access") == "yes",
+        "needs_email": form.get("needs_email") == "yes",
+        "needs_computer": form.get("needs_computer") == "yes",
+    }
+    for flag in get_preset_flags():
+        flag_id = flag["id"]
+        preset[flag_id] = form.get(flag_id) == "yes"
+    return preset
+
+
+def _admin_ctx(extra: dict | None = None) -> dict:
+    ctx = template_context()
+    if extra:
+        ctx.update(extra)
+    return ctx
+
+
+@router.get("/login", response_class=HTMLResponse)
+async def admin_login_get(request: Request):
+    if request.session.get("admin_authenticated"):
+        return RedirectResponse(url="/admin/", status_code=303)
+    return templates.TemplateResponse(request, "admin/login.html", _admin_ctx({
+        "error": None,
+        "env_auth_mode": admin_auth_uses_env_fallback(),
+    }))
+
+
+@router.post("/login")
+async def admin_login_post(request: Request):
+    form = await request.form()
+    username = form.get("username", "").strip()
+    password = form.get("password", "")
+
+    if authenticate_user(username, password):
+        request.session["admin_authenticated"] = True
+        return RedirectResponse(url="/admin/", status_code=303)
+
+    return templates.TemplateResponse(
+        request,
+        "admin/login.html",
+        _admin_ctx({"error": "Invalid username or password.", "env_auth_mode": admin_auth_uses_env_fallback()}),
+        status_code=401,
+    )
+
+
+@router.post("/logout")
+async def admin_logout(request: Request):
+    request.session.pop("admin_authenticated", None)
+    return RedirectResponse(url="/admin/login", status_code=303)
+
+
+@router.get("/", response_class=HTMLResponse)
+async def admin_index(request: Request, _: bool = Depends(require_admin)):
+    presets = get_presets()
+    return templates.TemplateResponse(request, "admin/index.html", _admin_ctx({
+        "presets": presets,
+        "preset_flags": get_preset_flags(),
+    }))
+
+
+@router.get("/new", response_class=HTMLResponse)
+async def admin_new_get(request: Request, _: bool = Depends(require_admin)):
+    return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx({
+        "preset": {},
+        "role_name": "",
+        "is_edit": False,
+        "error": None,
+        **_form_options(),
+    }))
+
+
+@router.post("/new")
+async def admin_new_post(request: Request, _: bool = Depends(require_admin)):
+    form = await request.form()
+    role_name = form.get("role_name", "").strip()
+    opts = _form_options()
+
+    if not role_name:
+        return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx({
+            "preset": {},
+            "role_name": "",
+            "is_edit": False,
+            "error": "Role name is required.",
+            **opts,
+        }))
+
+    presets = get_presets()
+    if role_name in presets:
+        return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx({
+            "preset": {},
+            "role_name": role_name,
+            "is_edit": False,
+            "error": f'A preset named "{role_name}" already exists. Choose a different name or edit the existing one.',
+            **opts,
+        }))
+
+    presets[role_name] = _parse_preset_form(form)
+    save_presets(presets)
+    return RedirectResponse(url="/admin/", status_code=303)
+
+
+@router.get("/edit/{role_name}", response_class=HTMLResponse)
+async def admin_edit_get(
+    role_name: str,
+    request: Request,
+    _: bool = Depends(require_admin),
+):
+    role_name = unquote(role_name)
+    presets = get_presets()
+    preset = presets.get(role_name)
+    if preset is None:
+        return RedirectResponse(url="/admin/")
+
+    return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx({
+        "preset": preset,
+        "role_name": role_name,
+        "is_edit": True,
+        "error": None,
+        **_form_options(),
+    }))
+
+
+@router.post("/edit/{role_name}")
+async def admin_edit_post(
+    role_name: str,
+    request: Request,
+    _: bool = Depends(require_admin),
+):
+    role_name = unquote(role_name)
+    presets = get_presets()
+    if role_name not in presets:
+        return RedirectResponse(url="/admin/")
+
+    form = await request.form()
+    presets[role_name] = _parse_preset_form(form)
+    save_presets(presets)
+    return RedirectResponse(url="/admin/", status_code=303)
+
+
+@router.post("/delete/{role_name}")
+async def admin_delete(
+    role_name: str,
+    request: Request,
+    _: bool = Depends(require_admin),
+):
+    role_name = unquote(role_name)
+    presets = get_presets()
+    presets.pop(role_name, None)
+    save_presets(presets)
+    return RedirectResponse(url="/admin/", status_code=303)

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Step 4 — Software & Access{% endblock %}
+
+{% block content %}
+<div class="card__header">
+  <h1 class="card__title">Software &amp; Portal Access</h1>
+  <p class="card__subtitle">Select all software licenses and external portal access this employee requires. Items marked <span class="badge badge--preset">Role Default</span> were suggested by the selected role.</p>
+</div>
+
+<form method="post" action="/step/4">
+
+  <div class="form-group form-group--required">
+    <label>Does this person require an email account?</label>
+    <div class="radio-group">
+      <label class="radio-label">
+        <input type="radio" name="needs_email" value="yes"
+               {% if data.get('needs_email') %}checked{% endif %}>
+        Yes
+      </label>
+      <label class="radio-label">
+        <input type="radio" name="needs_email" value="no"
+               {% if not data.get('needs_email') %}checked{% endif %}>
+        No
+      </label>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h2 class="form-section__title">Software Licenses</h2>
+    <div class="checkbox-grid">
+      {% for value, label in software_options %}
+      <label class="checkbox-label {% if value in preset_software %}preset-item{% endif %}">
+        <input type="checkbox" name="software" value="{{ value }}"
+               {% if value in data.get('software', []) %}checked{% endif %}>
+        <span>{{ label }}</span>
+        {% if value in preset_software %}<span class="badge badge--preset">Role Default</span>{% endif %}
+      </label>
+      {% endfor %}
+    </div>
+    <div class="form-group" style="margin-top:12px">
+      <label for="other_software">Other Software <span class="hint">(describe if not listed above)</span></label>
+      <input type="text" id="other_software" name="other_software"
+             value="{{ data.get('other_software', '') }}"
+             placeholder="e.g. custom line-of-business app">
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h2 class="form-section__title">External Portal Access</h2>
+    <div class="checkbox-grid">
+      {% for value, label in portal_options %}
+      <label class="checkbox-label {% if value in preset_portals %}preset-item{% endif %}">
+        <input type="checkbox" name="portals" value="{{ value }}"
+               {% if value in data.get('portals', []) %}checked{% endif %}>
+        <span>{{ label }}</span>
+        {% if value in preset_portals %}<span class="badge badge--preset">Role Default</span>{% endif %}
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="form-group form-group--required">
+    <label>Is mobile device access required?</label>
+    <div class="radio-group">
+      <label class="radio-label">
+        <input type="radio" name="mobile_access" value="yes"
+               {% if data.get('mobile_access') %}checked{% endif %}>
+        Yes
+      </label>
+      <label class="radio-label">
+        <input type="radio" name="mobile_access" value="no"
+               {% if not data.get('mobile_access') %}checked{% endif %}>
+        No
+      </label>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="network_printers">Network Printer(s) Needed <span class="hint">(name or location)</span></label>
+    <input type="text" id="network_printers" name="network_printers"
+           value="{{ data.get('network_printers', '') }}"
+           placeholder="{{ placeholders.network_printers }}">
+  </div>
+
+  <div class="form-nav">
+    <a href="/step/3" class="btn btn--secondary">&#8592; Back</a>
+    <button type="submit" class="btn btn--primary">Next: Groups &amp; Fax &#8594;</button>
+  </div>
+
+</form>
+{% endblock %}

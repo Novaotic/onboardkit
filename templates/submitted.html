@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Request Submitted{% endblock %}
+
+{% block content %}
+<div class="submitted-page">
+  {% if success %}
+    <div class="submitted-icon submitted-icon--success">&#10003;</div>
+    <h1 class="submitted-title">Request Sent!</h1>
+    <p class="submitted-body">
+      The IT checklist for <strong>{{ employee_name }}</strong> has been emailed to {{ it_team_label }}.
+      They will follow up with any questions.
+    </p>
+  {% else %}
+    <div class="submitted-icon submitted-icon--error">&#9888;</div>
+    <h1 class="submitted-title">Email Not Sent</h1>
+    <p class="submitted-body">
+      The request was completed, but the confirmation email could not be delivered.
+      Please forward the details manually or check the SMTP settings in <code>.env</code>.
+    </p>
+    {% if error %}
+    <pre class="error-detail">{{ error }}</pre>
+    {% endif %}
+  {% endif %}
+
+  <a href="/start" class="btn btn--primary" style="margin-top:2rem">Start a New Request</a>
+</div>
+{% endblock %}

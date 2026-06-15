@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Step 3 — Hardware{% endblock %}
+
+{% block content %}
+<div class="card__header">
+  <h1 class="card__title">Hardware</h1>
+  <p class="card__subtitle">Select the equipment this employee will need. Items marked <span class="badge badge--preset">Role Default</span> were suggested by the selected role.</p>
+</div>
+
+<form method="post" action="/step/3" id="step3Form">
+
+  <div class="form-group form-group--required">
+    <label>Does this person require a computer?</label>
+    <div class="radio-group">
+      <label class="radio-label">
+        <input type="radio" name="needs_computer" value="yes" id="needs_computer_yes"
+               {% if data.get('needs_computer', True) %}checked{% endif %}>
+        Yes
+      </label>
+      <label class="radio-label">
+        <input type="radio" name="needs_computer" value="no" id="needs_computer_no"
+               {% if not data.get('needs_computer', True) %}checked{% endif %}>
+        No
+      </label>
+    </div>
+  </div>
+
+  <div id="computerSection">
+
+    <div class="form-row form-row--2">
+      <div class="form-group">
+        <label>Computer Type</label>
+        <div class="radio-group">
+          {% for value, label in [("desktop","Desktop"), ("laptop","Laptop")] %}
+          <label class="radio-label radio-label--card {% if value in preset_hardware %}preset-item{% endif %}">
+            <input type="radio" name="computer_type" value="{{ value }}"
+                   {% if data.get('computer_type') == value %}checked{% endif %}>
+            <span>{{ label }}</span>
+            {% if value in preset_hardware %}<span class="badge badge--preset">Role Default</span>{% endif %}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Monitors</label>
+        <div class="radio-group">
+          {% for value, label in [("single_monitor","Single Monitor"), ("dual_monitor","Dual Monitor")] %}
+          <label class="radio-label radio-label--card {% if value in preset_hardware %}preset-item{% endif %}">
+            <input type="radio" name="monitors" value="{{ value }}"
+                   {% if data.get('monitors') == value %}checked{% endif %}>
+            <span>{{ label }}</span>
+            {% if value in preset_hardware %}<span class="badge badge--preset">Role Default</span>{% endif %}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Additional Peripherals</label>
+      <div class="checkbox-grid">
+        {% set skip = ["desktop","laptop","single_monitor","dual_monitor"] %}
+        {% for value, label in hardware_options %}
+          {% if value not in skip %}
+          <label class="checkbox-label {% if value in preset_hardware %}preset-item{% endif %}">
+            <input type="checkbox" name="peripherals" value="{{ value }}"
+                   {% if value in data.get('peripherals', []) %}checked{% endif %}>
+            <span>{{ label }}</span>
+            {% if value in preset_hardware %}<span class="badge badge--preset">Role Default</span>{% endif %}
+          </label>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+  </div><!-- /computerSection -->
+
+  <div class="form-nav">
+    <a href="/step/2" class="btn btn--secondary">&#8592; Back</a>
+    <button type="submit" class="btn btn--primary">Next: Software &amp; Access &#8594;</button>
+  </div>
+
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const yesRadio = document.getElementById('needs_computer_yes');
+  const noRadio  = document.getElementById('needs_computer_no');
+  const section  = document.getElementById('computerSection');
+
+  function toggleComputer() {
+    section.style.display = yesRadio.checked ? '' : 'none';
+  }
+  yesRadio.addEventListener('change', toggleComputer);
+  noRadio.addEventListener('change', toggleComputer);
+  toggleComputer();
+</script>
+{% endblock %}

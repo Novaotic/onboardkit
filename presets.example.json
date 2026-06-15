@@ -1,0 +1,50 @@
+{
+  "Software Engineer": {
+    "hardware": ["laptop", "dual_monitor", "docking_station", "headset"],
+    "software": ["microsoft_365", "slack", "zoom", "vpn_client", "password_manager"],
+    "portals": ["saas_dashboard"],
+    "mailboxes": ["engineering_team"],
+    "email_groups": [
+      "allstaff@acmecorp.example",
+      "engineering@acmecorp.example"
+    ],
+    "location_email_groups": {
+      "Branch East": ["east-engineering@acmecorp.example"]
+    },
+    "mobile_access": true,
+    "needs_email": true,
+    "needs_computer": true,
+    "role_followup": false
+  },
+  "Office Administrator": {
+    "hardware": ["desktop", "dual_monitor", "phone", "printer"],
+    "software": ["microsoft_365", "zoom"],
+    "portals": ["vendor_portal_a"],
+    "mailboxes": ["operations_team"],
+    "email_groups": [
+      "allstaff@acmecorp.example",
+      "operations@acmecorp.example"
+    ],
+    "location_email_groups": {
+      "Headquarters": ["hq-frontdesk@acmecorp.example"]
+    },
+    "mobile_access": false,
+    "needs_email": true,
+    "needs_computer": true,
+    "role_followup": false
+  },
+  "Sales Representative": {
+    "hardware": ["laptop", "phone", "headset"],
+    "software": ["microsoft_365", "slack", "zoom", "google_workspace"],
+    "portals": ["partner_extranet", "vendor_portal_b"],
+    "mailboxes": ["sales_team"],
+    "email_groups": [
+      "allstaff@acmecorp.example",
+      "sales@acmecorp.example"
+    ],
+    "mobile_access": true,
+    "needs_email": true,
+    "needs_computer": true,
+    "role_followup": false
+  }
+}

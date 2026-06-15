@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Step 6 — Security{% endblock %}
+
+{% block content %}
+<div class="card__header">
+  <h1 class="card__title">Security Access</h1>
+  <p class="card__subtitle">Indicate whether this employee needs physical security access.</p>
+</div>
+
+<form method="post" action="/step/6" id="step6Form">
+
+  <div class="form-group form-group--required">
+    <label>Does this employee require an alarm code?</label>
+    <div class="radio-group">
+      <label class="radio-label">
+        <input type="radio" name="alarm_code" value="yes" id="alarm_yes"
+               {% if data.get('alarm_code') %}checked{% endif %}>
+        Yes
+      </label>
+      <label class="radio-label">
+        <input type="radio" name="alarm_code" value="no" id="alarm_no"
+               {% if not data.get('alarm_code') %}checked{% endif %}>
+        No
+      </label>
+    </div>
+  </div>
+
+  <div id="alarmFacilitiesSection" style="display:none">
+    <div class="form-group">
+      <label>Which facilities need alarm access?</label>
+      <div class="checkbox-grid">
+        {% for value, label in alarm_facilities %}
+        <label class="checkbox-label">
+          <input type="checkbox" name="alarm_facilities" value="{{ value }}"
+                 {% if value in data.get('alarm_facilities', []) %}checked{% endif %}>
+          <span>{{ label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="form-group form-group--required">
+    <label>Does this employee need gate access?</label>
+    <div class="radio-group">
+      <label class="radio-label">
+        <input type="radio" name="gate_access" value="yes"
+               {% if data.get('gate_access') %}checked{% endif %}>
+        Yes
+      </label>
+      <label class="radio-label">
+        <input type="radio" name="gate_access" value="no"
+               {% if not data.get('gate_access') %}checked{% endif %}>
+        No
+      </label>
+    </div>
+  </div>
+
+  <div class="form-nav">
+    <a href="/step/5" class="btn btn--secondary">&#8592; Back</a>
+    <button type="submit" class="btn btn--primary">Review Request &#8594;</button>
+  </div>
+
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const alarmYes = document.getElementById('alarm_yes');
+  const alarmNo  = document.getElementById('alarm_no');
+  const facilities = document.getElementById('alarmFacilitiesSection');
+
+  function toggleFacilities() {
+    facilities.style.display = alarmYes.checked ? '' : 'none';
+  }
+  alarmYes.addEventListener('change', toggleFacilities);
+  alarmNo.addEventListener('change', toggleFacilities);
+  toggleFacilities();
+</script>
+{% endblock %}

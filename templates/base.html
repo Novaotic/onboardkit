@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}New Hire Request{% endblock %} — {{ app_name }}</title>
+  <link rel="stylesheet" href="/static/style.css?v=1">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a href="/" class="site-header__brand site-header__brand--link">
+        <span class="site-header__logo">&#128203;</span>
+        <span>{{ app_name }}</span>
+      </a>
+      <a href="/admin" class="site-header__admin">Admin</a>
+    </div>
+  </header>
+
+  {% if current_step is defined and current_step <= total_steps %}
+  <div class="progress-wrap">
+    <div class="progress-bar-outer">
+      {% set step_names = ["Employee Info", "Location", "Hardware", "Software & Access", "Groups & Fax", "Security"] %}
+      {% for i in range(1, total_steps + 1) %}
+        {% set state = "completed" if i < current_step else ("active" if i == current_step else "pending") %}
+        <div class="progress-step progress-step--{{ state }}">
+          <div class="progress-step__circle">
+            {% if state == "completed" %}&#10003;{% else %}{{ i }}{% endif %}
+          </div>
+          <span class="progress-step__label">{{ step_names[i - 1] }}</span>
+        </div>
+        {% if i < total_steps %}
+          <div class="progress-connector progress-connector--{{ 'filled' if i < current_step else 'empty' }}"></div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <main class="page-main">
+    <div class="card">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <script src="/static/form.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

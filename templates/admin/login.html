@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Sign In</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--gray-50);
+    }
+
+    .login-header {
+      background: #1e3a5f;
+      color: #fff;
+      padding: 0 1.5rem;
+    }
+    .login-header__inner {
+      max-width: 960px;
+      margin: 0 auto;
+      height: 56px;
+      display: flex;
+      align-items: center;
+    }
+    .login-header__brand {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .login-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .login-card {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      width: 100%;
+      max-width: 380px;
+      padding: 2rem 2rem 2.25rem;
+    }
+
+    .login-card__title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: .25rem;
+      color: var(--gray-900);
+    }
+    .login-card__sub {
+      font-size: .875rem;
+      color: var(--gray-500);
+      margin-bottom: 1.75rem;
+    }
+
+    .login-card .field {
+      margin-bottom: 1.1rem;
+    }
+    .login-card label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin-bottom: .35rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .login-card input[type="text"],
+    .login-card input[type="password"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: .6rem .75rem;
+      border: 1px solid var(--gray-300);
+      border-radius: var(--radius-sm, 6px);
+      font-size: .95rem;
+      transition: border-color .15s;
+    }
+    .login-card input:focus {
+      outline: none;
+      border-color: #1e3a5f;
+      box-shadow: 0 0 0 3px rgba(30,58,95,.12);
+    }
+
+    .login-error {
+      background: var(--danger-light, #fee2e2);
+      color: var(--danger, #dc2626);
+      border: 1px solid #fca5a5;
+      border-radius: var(--radius-sm, 6px);
+      padding: .6rem .85rem;
+      font-size: .875rem;
+      margin-bottom: 1.1rem;
+    }
+
+    .login-dev-warning {
+      background: #fffbeb;
+      color: #92400e;
+      border: 1px solid #fcd34d;
+      border-radius: var(--radius-sm, 6px);
+      padding: .6rem .85rem;
+      font-size: .8rem;
+      line-height: 1.45;
+      margin-bottom: 1.1rem;
+    }
+    .login-dev-warning strong {
+      display: block;
+      margin-bottom: .25rem;
+    }
+
+    .login-card .btn--submit {
+      width: 100%;
+      margin-top: .5rem;
+      background: #1e3a5f;
+      color: #fff;
+      border: none;
+      padding: .65rem 1rem;
+      font-size: .95rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm, 6px);
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .login-card .btn--submit:hover { background: #16304f; }
+
+    .login-footer {
+      text-align: center;
+      font-size: .8rem;
+      color: var(--gray-400);
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+
+<header class="login-header">
+  <div class="login-header__inner">
+    <span class="login-header__brand">&#9881; Role Preset Manager</span>
+  </div>
+</header>
+
+<div class="login-wrap">
+  <div class="login-card">
+    <h1 class="login-card__title">Admin Sign In</h1>
+    {% if env_auth_mode %}
+    <div class="login-dev-warning" role="status">
+      <strong>Development authentication</strong>
+      LDAP is not configured. Sign-in uses credentials from <code>.env</code>.
+      Do not deploy to production in this mode — configure LDAP first.
+    </div>
+    {% else %}
+    <p class="login-card__sub">Sign in with your network credentials.</p>
+    {% endif %}
+
+    {% if error %}
+    <div class="login-error" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/admin/login">
+      <div class="field">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username"
+               autocomplete="username" autofocus required>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password"
+               autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn--submit">Sign In</button>
+    </form>
+  </div>
+</div>
+
+<p class="login-footer">{{ app_name }} &mdash; Admin Access</p>
+
+</body>
+</html>

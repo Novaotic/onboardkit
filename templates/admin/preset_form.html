@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ "Edit" if is_edit else "New" }} Preset — Admin</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .admin-header {
+      background: #1e3a5f;
+      color: #fff;
+      padding: 0 1.5rem;
+    }
+    .admin-header__inner {
+      max-width: 960px;
+      margin: 0 auto;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .admin-header__brand {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .admin-header__nav {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+    .admin-header__nav a {
+      color: rgba(255,255,255,.75);
+      text-decoration: none;
+      font-size: .875rem;
+    }
+    .admin-header__nav a:hover { color: #fff; }
+    .admin-header__nav .btn-logout {
+      background: none;
+      border: 1px solid rgba(255,255,255,.35);
+      color: rgba(255,255,255,.75);
+      font-size: .8rem;
+      padding: .25rem .65rem;
+      border-radius: 4px;
+      cursor: pointer;
+      line-height: 1.5;
+    }
+    .admin-header__nav .btn-logout:hover {
+      border-color: rgba(255,255,255,.7);
+      color: #fff;
+    }
+
+    .admin-main {
+      max-width: 860px;
+      margin: 2rem auto 4rem;
+      padding: 0 1.5rem;
+    }
+    .page-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 1.5rem; }
+
+    .error-banner {
+      background: var(--danger-light);
+      border: 1px solid #fca5a5;
+      border-radius: var(--radius-sm);
+      padding: .75rem 1rem;
+      color: var(--danger);
+      font-size: .9rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .loc-group-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .75rem;
+    }
+    .loc-group-item label {
+      font-weight: 600;
+      font-size: .8rem;
+      color: var(--gray-600);
+      display: block;
+      margin-bottom: .25rem;
+    }
+  </style>
+</head>
+<body>
+
+<header class="admin-header">
+  <div class="admin-header__inner">
+    <div class="admin-header__brand">&#9881; Role Preset Manager</div>
+    <nav class="admin-header__nav">
+      <a href="/admin/">&#8592; Back to Presets</a>
+      <form method="post" action="/admin/logout" style="margin:0">
+        <button type="submit" class="btn-logout">Sign out</button>
+      </form>
+    </nav>
+  </div>
+</header>
+
+<main class="admin-main">
+  <h1 class="page-title">{{ "Edit Preset: " + role_name if is_edit else "New Role Preset" }}</h1>
+
+  {% if error %}
+  <div class="error-banner">{{ error }}</div>
+  {% endif %}
+
+  {% set action = "/admin/edit/" + role_name if is_edit else "/admin/new" %}
+  <form method="post" action="{{ action }}">
+
+    <div class="card" style="margin-bottom:1rem">
+
+      <!-- Role Name -->
+      <div class="form-group form-group--required" style="margin-bottom:1.5rem">
+        <label for="role_name">Role Name</label>
+        {% if is_edit %}
+          <input type="text" value="{{ role_name }}" disabled
+                 style="background:var(--gray-100);color:var(--gray-500)">
+          <span class="hint">Role name cannot be changed after creation.</span>
+        {% else %}
+          <input type="text" id="role_name" name="role_name"
+                 value="{{ role_name }}" required
+                 placeholder="e.g. Nurse, Billing Specialist, Front Desk">
+        {% endif %}
+      </div>
+
+      <!-- Toggles -->
+      <div class="form-section">
+        <h2 class="form-section__title">Access Flags</h2>
+        <div class="form-row form-row--2">
+
+          {% for field, label in [("needs_computer","Requires a Computer?"), ("needs_email","Requires Email?"), ("mobile_access","Mobile Access?")]  %}
+          <div class="form-group">
+            <label>{{ label }}</label>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" name="{{ field }}" value="yes"
+                       {% if preset.get(field) %}checked{% endif %}>
+                Yes
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="{{ field }}" value="no"
+                       {% if not preset.get(field) %}checked{% endif %}>
+                No
+              </label>
+            </div>
+          </div>
+          {% endfor %}
+
+          {% for flag in preset_flags %}
+          <div class="form-group">
+            <label>{{ flag.admin_label }}</label>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" name="{{ flag.id }}" value="yes"
+                       {% if preset.get(flag.id) %}checked{% endif %}>
+                Yes
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="{{ flag.id }}" value="no"
+                       {% if not preset.get(flag.id) %}checked{% endif %}>
+                No
+              </label>
+            </div>
+          </div>
+          {% endfor %}
+
+        </div>
+      </div>
+
+      <!-- Hardware -->
+      <div class="form-section">
+        <h2 class="form-section__title">Hardware</h2>
+        <div class="form-row form-row--2">
+          <div class="form-group">
+            <label>Computer Type</label>
+            <div class="radio-group">
+              {% set hw = preset.get("hardware", []) %}
+              {% for value, label in [("desktop","Desktop"), ("laptop","Laptop")] %}
+              <label class="radio-label">
+                <input type="radio" name="computer_type" value="{{ value }}"
+                       {% if value in hw %}checked{% endif %}>
+                {{ label }}
+              </label>
+              {% endfor %}
+              <label class="radio-label">
+                <input type="radio" name="computer_type" value=""
+                       {% if "desktop" not in hw and "laptop" not in hw %}checked{% endif %}>
+                None
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Monitors</label>
+            <div class="radio-group">
+              {% for value, label in [("single_monitor","Single"), ("dual_monitor","Dual")] %}
+              <label class="radio-label">
+                <input type="radio" name="monitors" value="{{ value }}"
+                       {% if value in hw %}checked{% endif %}>
+                {{ label }}
+              </label>
+              {% endfor %}
+              <label class="radio-label">
+                <input type="radio" name="monitors" value=""
+                       {% if "single_monitor" not in hw and "dual_monitor" not in hw %}checked{% endif %}>
+                None
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Peripherals</label>
+          <div class="checkbox-grid">
+            {% set skip = ["desktop","laptop","single_monitor","dual_monitor"] %}
+            {% for value, label in hardware_options %}
+              {% if value not in skip %}
+              <label class="checkbox-label">
+                <input type="checkbox" name="peripherals" value="{{ value }}"
+                       {% if value in hw %}checked{% endif %}>
+                <span>{{ label }}</span>
+              </label>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Software -->
+      <div class="form-section">
+        <h2 class="form-section__title">Software Licenses</h2>
+        <div class="checkbox-grid">
+          {% for value, label in software_options %}
+          <label class="checkbox-label">
+            <input type="checkbox" name="software" value="{{ value }}"
+                   {% if value in preset.get("software", []) %}checked{% endif %}>
+            <span>{{ label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Portals -->
+      <div class="form-section">
+        <h2 class="form-section__title">Portal Access</h2>
+        <div class="checkbox-grid">
+          {% for value, label in portal_options %}
+          <label class="checkbox-label">
+            <input type="checkbox" name="portals" value="{{ value }}"
+                   {% if value in preset.get("portals", []) %}checked{% endif %}>
+            <span>{{ label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Mailboxes -->
+      <div class="form-section">
+        <h2 class="form-section__title">Shared Mailboxes</h2>
+        <div class="checkbox-grid">
+          {% for value, label in mailbox_options %}
+          <label class="checkbox-label">
+            <input type="checkbox" name="mailboxes" value="{{ value }}"
+                   {% if value in preset.get("mailboxes", []) %}checked{% endif %}>
+            <span>{{ label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Email Groups -->
+      <div class="form-section">
+        <h2 class="form-section__title">Email Distribution Groups</h2>
+        <div class="form-group">
+          <label for="email_groups">
+            Base Groups
+            <span class="hint">(comma-separated — added for all locations)</span>
+          </label>
+          <input type="text" id="email_groups" name="email_groups"
+                 value="{{ preset.get('email_groups', []) | join(', ') }}"
+                 placeholder="{{ placeholders.email_groups }}">
+        </div>
+
+        <div class="form-group">
+          <label>Location-Conditional Groups
+            <span class="hint">(comma-separated — only added when that office is selected)</span>
+          </label>
+          {% set loc_rules = preset.get("location_email_groups", {}) %}
+          <div class="loc-group-grid">
+            {% for office in office_options %}
+            <div class="loc-group-item">
+              <label>{{ office }}</label>
+              <input type="text" name="loc_groups_{{ office }}"
+                     value="{{ loc_rules.get(office, []) | join(', ') }}"
+                     placeholder="team@company.com">
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /card -->
+
+    <div class="form-nav">
+      <a href="/admin/" class="btn btn--secondary">&#8592; Cancel</a>
+      <button type="submit" class="btn btn--primary">
+        {{ "Save Changes" if is_edit else "Create Preset" }}
+      </button>
+    </div>
+
+  </form>
+</main>
+
+</body>
+</html>

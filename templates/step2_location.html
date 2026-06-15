@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Step 2 — Location{% endblock %}
+
+{% block content %}
+<div class="card__header">
+  <h1 class="card__title">Location</h1>
+  <p class="card__subtitle">Where will this employee be primarily based?</p>
+</div>
+
+<form method="post" action="/step/2">
+
+  <div class="form-group form-group--required">
+    <label>Office Location</label>
+    <div class="radio-group radio-group--grid">
+      {% for office in offices %}
+      <label class="radio-label radio-label--card">
+        <input type="radio" name="office" value="{{ office }}" required
+               {% if data.get('office') == office %}checked{% endif %}>
+        <span>{{ office }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="area">Department / Area <span class="hint">(if known)</span></label>
+    <input type="text" id="area" name="area"
+           value="{{ data.get('area', '') }}"
+           placeholder="{{ placeholders.department_area }}">
+  </div>
+
+  <div class="form-nav">
+    <a href="/step/1" class="btn btn--secondary">&#8592; Back</a>
+    <button type="submit" class="btn btn--primary">Next: Hardware &#8594;</button>
+  </div>
+
+</form>
+{% endblock %}

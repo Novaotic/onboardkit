@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preset Manager — Admin</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .admin-header {
+      background: #1e3a5f;
+      color: #fff;
+      padding: 0 1.5rem;
+    }
+    .admin-header__inner {
+      max-width: 960px;
+      margin: 0 auto;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .admin-header__brand {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .admin-header__nav {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+    .admin-header__nav a {
+      color: rgba(255,255,255,.75);
+      text-decoration: none;
+      font-size: .875rem;
+    }
+    .admin-header__nav a:hover { color: #fff; }
+    .admin-header__nav .btn-logout {
+      background: none;
+      border: 1px solid rgba(255,255,255,.35);
+      color: rgba(255,255,255,.75);
+      font-size: .8rem;
+      padding: .25rem .65rem;
+      border-radius: 4px;
+      cursor: pointer;
+      line-height: 1.5;
+    }
+    .admin-header__nav .btn-logout:hover {
+      border-color: rgba(255,255,255,.7);
+      color: #fff;
+    }
+
+    .admin-main {
+      max-width: 960px;
+      margin: 2rem auto 4rem;
+      padding: 0 1.5rem;
+    }
+    .page-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+    .page-title { font-size: 1.4rem; font-weight: 700; }
+
+    .preset-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+    .preset-table th {
+      background: var(--gray-50);
+      padding: .75rem 1.25rem;
+      text-align: left;
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--gray-500);
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .preset-table td {
+      padding: .9rem 1.25rem;
+      border-bottom: 1px solid var(--gray-100);
+      vertical-align: top;
+      font-size: .9rem;
+    }
+    .preset-table tr:last-child td { border-bottom: none; }
+    .preset-table tr:hover td { background: var(--gray-50); }
+
+    .tag-list { display: flex; flex-wrap: wrap; gap: 3px; }
+
+    .action-cell { white-space: nowrap; }
+    .btn--danger {
+      background: #fff;
+      color: var(--danger);
+      border-color: #fca5a5;
+    }
+    .btn--danger:hover { background: var(--danger-light); }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--gray-500);
+    }
+    .empty-state p { margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+
+<header class="admin-header">
+  <div class="admin-header__inner">
+    <div class="admin-header__brand">&#9881; Role Preset Manager</div>
+    <nav class="admin-header__nav">
+      <a href="/">&#8592; Back to Portal</a>
+      <form method="post" action="/admin/logout" style="margin:0">
+        <button type="submit" class="btn-logout">Sign out</button>
+      </form>
+    </nav>
+  </div>
+</header>
+
+<main class="admin-main">
+  <div class="page-title-row">
+    <h1 class="page-title">Role Presets</h1>
+    <a href="/admin/new" class="btn btn--primary">&#43; New Preset</a>
+  </div>
+
+  {% if presets %}
+  <table class="preset-table">
+    <thead>
+      <tr>
+        <th>Role Name</th>
+        <th>Hardware</th>
+        <th>Software</th>
+        <th>Portals</th>
+        <th>Mailboxes</th>
+        <th>Flags</th>
+        <th>Location Rules</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for role, p in presets.items() %}
+      <tr>
+        <td><strong>{{ role }}</strong></td>
+
+        <td>
+          <div class="tag-list">
+            {% for hw in p.get("hardware", []) %}
+              <span class="tag">{{ hw.replace("_"," ").title() }}</span>
+            {% else %}
+              <span style="color:var(--gray-400)">—</span>
+            {% endfor %}
+          </div>
+        </td>
+
+        <td>
+          <div class="tag-list">
+            {% for sw in p.get("software", []) %}
+              <span class="tag">{{ sw }}</span>
+            {% else %}
+              <span style="color:var(--gray-400)">—</span>
+            {% endfor %}
+          </div>
+        </td>
+
+        <td>
+          <div class="tag-list">
+            {% for pt in p.get("portals", []) %}
+              <span class="tag">{{ pt }}</span>
+            {% else %}
+              <span style="color:var(--gray-400)">—</span>
+            {% endfor %}
+          </div>
+        </td>
+
+        <td>
+          <div class="tag-list">
+            {% for mb in p.get("mailboxes", []) %}
+              <span class="tag">{{ mb.replace("_"," ").title() }}</span>
+            {% else %}
+              <span style="color:var(--gray-400)">—</span>
+            {% endfor %}
+          </div>
+        </td>
+
+        <td style="font-size:.8rem;line-height:1.8">
+          {% if p.get("needs_computer") %}<span class="tag">Computer</span>{% endif %}
+          {% if p.get("needs_email") %}<span class="tag">Email</span>{% endif %}
+          {% if p.get("mobile_access") %}<span class="tag">Mobile</span>{% endif %}
+          {% for flag in preset_flags %}
+            {% if p.get(flag.id) %}<span class="tag tag--other">{{ flag.admin_label }}</span>{% endif %}
+          {% endfor %}
+        </td>
+
+        <td style="font-size:.8rem;line-height:1.8">
+          {% set loc_rules = p.get("location_email_groups", {}) %}
+          {% if loc_rules %}
+            {% for office, groups in loc_rules.items() %}
+              <strong>{{ office }}:</strong> {{ groups | join(", ") }}<br>
+            {% endfor %}
+          {% else %}
+            <span style="color:var(--gray-400)">—</span>
+          {% endif %}
+        </td>
+
+        <td class="action-cell">
+          <a href="/admin/edit/{{ role | urlencode }}" class="btn btn--secondary" style="margin-right:.25rem">Edit</a>
+          <form method="post" action="/admin/delete/{{ role | urlencode }}"
+                style="display:inline"
+                onsubmit="return confirm('Delete the \'{{ role }}\' preset? This cannot be undone.')">
+            <button type="submit" class="btn btn--danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% else %}
+  <div class="empty-state">
+    <p>No role presets yet.</p>
+    <a href="/admin/new" class="btn btn--primary">Create the first preset</a>
+  </div>
+  {% endif %}
+</main>
+
+</body>
+</html>

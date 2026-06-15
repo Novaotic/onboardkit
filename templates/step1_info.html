@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Step 1 — Employee Info{% endblock %}
+
+{% block content %}
+<div class="card__header">
+  <h1 class="card__title">Employee Information</h1>
+  <p class="card__subtitle">Enter the new hire's details and select their role. The role drives automatic access recommendations on later steps.</p>
+</div>
+
+<form method="post" action="/step/1" id="step1Form">
+
+  <div class="form-row form-row--3">
+    <div class="form-group form-group--required">
+      <label for="first_name">First Name</label>
+      <input type="text" id="first_name" name="first_name"
+             value="{{ data.get('first_name', '') }}" required>
+    </div>
+    <div class="form-group">
+      <label for="middle_name">Middle Name</label>
+      <input type="text" id="middle_name" name="middle_name"
+             value="{{ data.get('middle_name', '') }}">
+    </div>
+    <div class="form-group form-group--required">
+      <label for="last_name">Last Name</label>
+      <input type="text" id="last_name" name="last_name"
+             value="{{ data.get('last_name', '') }}" required>
+    </div>
+  </div>
+
+  <div class="form-row form-row--2">
+    <div class="form-group">
+      <label for="preferred_name">Preferred Name</label>
+      <input type="text" id="preferred_name" name="preferred_name"
+             value="{{ data.get('preferred_name', '') }}">
+    </div>
+    <div class="form-group">
+      <label for="credentials">Credentials <span class="hint">(e.g. CPA, PMP)</span></label>
+      <input type="text" id="credentials" name="credentials"
+             value="{{ data.get('credentials', '') }}">
+    </div>
+  </div>
+
+  <div class="form-row form-row--2">
+    <div class="form-group form-group--required">
+      <label for="start_date">Start Date</label>
+      <input type="date" id="start_date" name="start_date"
+             value="{{ data.get('start_date', '') }}" required>
+    </div>
+    <div class="form-group form-group--required">
+      <label for="manager_name">Requesting Manager / Supervisor</label>
+      <input type="text" id="manager_name" name="manager_name"
+             value="{{ data.get('manager_name', '') }}" required>
+    </div>
+  </div>
+
+  <div class="form-row form-row--2">
+    <div class="form-group form-group--required">
+      <label for="title">Job Role / Title</label>
+      <select id="title" name="title" required>
+        <option value="" disabled {% if not data.get('title') %}selected{% endif %}>— Select a role —</option>
+        {% for role in roles %}
+          <option value="{{ role }}" {% if data.get('title') == role %}selected{% endif %}>{{ role }}</option>
+        {% endfor %}
+        <option value="Other" {% if data.get('title') == 'Other' %}selected{% endif %}>Other (specify below)</option>
+      </select>
+    </div>
+    <div class="form-group" id="customTitleWrap" style="display:none">
+      <label for="custom_title">Custom Title</label>
+      <input type="text" id="custom_title" name="custom_title"
+             value="{{ data.get('custom_title', '') }}"
+             placeholder="Enter exact job title">
+    </div>
+  </div>
+
+  <div id="presetBanner" class="preset-banner" style="display:none">
+    <strong>&#9889; Role defaults loaded.</strong>
+    <span id="presetSummary"></span>
+    Steps 3–5 will be pre-filled — you can adjust any item.
+  </div>
+
+  {% if employee_fields.student_or_resident.enabled or employee_fields.bilingual.enabled %}
+  <div class="form-row form-row--2">
+    {% if employee_fields.student_or_resident.enabled %}
+    <div class="form-group">
+      <label>{{ employee_fields.student_or_resident.label }}</label>
+      <div class="radio-group">
+        <label class="radio-label">
+          <input type="radio" name="is_student_or_resident" value="no"
+                 {% if not data.get('is_student_or_resident') %}checked{% endif %}>
+          No
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="is_student_or_resident" value="yes"
+                 {% if data.get('is_student_or_resident') %}checked{% endif %}>
+          Yes
+        </label>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if employee_fields.bilingual.enabled %}
+    <div class="form-group">
+      <label>{{ employee_fields.bilingual.label }}</label>
+      <div class="radio-group">
+        <label class="radio-label">
+          <input type="radio" name="is_bilingual" value="no"
+                 {% if not data.get('is_bilingual') %}checked{% endif %}>
+          No
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="is_bilingual" value="yes"
+                 {% if data.get('is_bilingual') %}checked{% endif %}>
+          Yes
+        </label>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="form-nav">
+    <span></span>
+    <button type="submit" class="btn btn--primary">Next: Location &#8594;</button>
+  </div>
+
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const titleSelect = document.getElementById('title');
+  const customWrap  = document.getElementById('customTitleWrap');
+  const customInput = document.getElementById('custom_title');
+
+  function toggleCustomTitle() {
+    const isOther = titleSelect.value === 'Other';
+    customWrap.style.display = isOther ? '' : 'none';
+    customInput.required = isOther;
+  }
+  titleSelect.addEventListener('change', toggleCustomTitle);
+  toggleCustomTitle();
+
+  const banner  = document.getElementById('presetBanner');
+  const summary = document.getElementById('presetSummary');
+
+  titleSelect.addEventListener('change', async () => {
+    const role = titleSelect.value;
+    if (!role || role === 'Other') { banner.style.display = 'none'; return; }
+    try {
+      const res  = await fetch(`/api/presets/${encodeURIComponent(role)}`);
+      const data = await res.json();
+      const sw   = (data.software  || []).length;
+      const pt   = (data.portals   || []).length;
+      const hw   = (data.hardware  || []).length;
+      summary.textContent = ` ${hw} hardware item(s), ${sw} software item(s), ${pt} portal(s). `;
+      banner.style.display = '';
+    } catch { banner.style.display = 'none'; }
+  });
+
+  if (titleSelect.value && titleSelect.value !== 'Other') {
+    titleSelect.dispatchEvent(new Event('change'));
+  }
+</script>
+{% endblock %}
