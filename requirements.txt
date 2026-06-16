@@ -6,3 +6,4 @@ itsdangerous>=2.1
 python-dotenv>=1.0
 starlette>=0.36
 ldap3>=2.9
+pytest>=8.0
