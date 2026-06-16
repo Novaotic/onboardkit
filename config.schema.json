@@ -1,0 +1,35 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+        "branding"
+    ],
+    "properties": {
+        "branding": {
+            "type": "object",
+            "description": "UI and email branding",
+            "required": [
+                "app_name"
+            ],
+            "properties": {
+                "app_name": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "tagline": {
+                    "type": "string"
+                },
+                "it_team_label": {
+                    "type": "string"
+                },
+                "email_subject_prefix": {
+                    "type": "string"
+                },
+                "email_footer": {
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false
+        }
+    }
+}
