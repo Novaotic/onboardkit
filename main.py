@@ -3,6 +3,8 @@ import os
 import json
 from contextlib import asynccontextmanager
 from datetime import datetime
+from preset_validation import validate_presets
+from config_store import get_config
 
 from dotenv import load_dotenv
 
@@ -40,6 +42,9 @@ log = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     init_config()
     init_store()
+    errors = validate_presets(get_presets(), get_config())
+    for msg in errors:
+        log.warning("Preset validation: %s", msg)
     if admin_auth_uses_env_fallback():
         log.warning(
             "Admin authentication is using ADMIN_USERNAME / ADMIN_PASSWORD from .env "

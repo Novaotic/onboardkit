@@ -5,9 +5,10 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from auth import authenticate_user, admin_auth_uses_env_fallback
-from config_store import get_offices, get_preset_flags, template_context
+from config_store import get_config, get_offices, get_preset_flags, template_context
 from deps import require_admin
 from preset_store import get_presets, save_presets
+from preset_validation import validate_presets
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 templates = Jinja2Templates(directory="templates")
@@ -128,6 +129,7 @@ async def admin_new_post(request: Request, _: bool = Depends(require_admin)):
     form = await request.form()
     role_name = form.get("role_name", "").strip()
     opts = _form_options()
+    parsed = _parse_preset_form(form)
 
     if not role_name:
         return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx({
@@ -148,7 +150,17 @@ async def admin_new_post(request: Request, _: bool = Depends(require_admin)):
             **opts,
         }))
 
-    presets[role_name] = _parse_preset_form(form)
+    errors = validate_presets({role_name: parsed}, get_config())
+    if errors:
+        return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx({
+            "preset": parsed,
+            "role_name": role_name,
+            "is_edit": False,
+            "error": "\n".join(errors),
+            **opts,
+        }))
+
+    presets[role_name] = parsed
     save_presets(presets)
     return RedirectResponse(url="/admin/", status_code=303)
 
@@ -186,7 +198,18 @@ async def admin_edit_post(
         return RedirectResponse(url="/admin/")
 
     form = await request.form()
-    presets[role_name] = _parse_preset_form(form)
+    parsed = _parse_preset_form(form)
+    errors = validate_presets({role_name: parsed}, get_config())
+    if errors:
+        return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx({
+            "preset": parsed,
+            "role_name": role_name,
+            "is_edit": True,
+            "error": "\n".join(errors),
+            **_form_options(),
+        }))
+
+    presets[role_name] = parsed
     save_presets(presets)
     return RedirectResponse(url="/admin/", status_code=303)
 
