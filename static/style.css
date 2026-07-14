@@ -72,8 +72,14 @@ body {
 .site-header__brand--link:hover { opacity: .92; }
 .site-header__logo { font-size: 1.3rem; }
 
-.site-header__admin {
+.site-header__nav {
   justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+.site-header__admin {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -92,6 +98,29 @@ body {
   background: rgba(255, 255, 255, .24);
   border-color: rgba(255, 255, 255, .55);
   color: #fff;
+}
+.site-header__user {
+  font-size: .85rem;
+  opacity: .9;
+}
+.site-header__logout {
+  margin: 0;
+}
+.site-header__logout-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: .35rem .75rem;
+  font-family: var(--font);
+  font-size: .8rem;
+  font-weight: 600;
+  color: #fff;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, .35);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.site-header__logout-btn:hover {
+  background: rgba(255, 255, 255, .14);
 }
 
 /* ── Progress Bar ─────────────────────────────────────────────────────────── */

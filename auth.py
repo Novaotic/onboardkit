@@ -1,4 +1,4 @@
-"""Admin authentication helpers.
+"""Portal authentication helpers.
 
 Authentication flow
 -------------------
@@ -7,8 +7,12 @@ Authentication flow
    their ``memberOf`` attribute (self-read is always permitted in AD).
 3. If the self-lookup fails, fall back to a service account connection
    (LDAP_BIND_DN / LDAP_BIND_PASSWORD).
-4. Check that the user is a member of LDAP_ADMIN_GROUP using the AD
-   transitive-membership OID so nested groups work correctly.
+4. Check membership in LDAP_USERS_GROUP ("Portal Users") and/or
+   LDAP_ADMIN_GROUP ("Portal Admin") using the AD transitive-membership OID
+   so nested groups work correctly.
+
+   - Portal Users: can use the request portal (forms).
+   - Portal Admin: same portal access, plus the admin area.
 
 Dev fallback
 ------------
@@ -16,8 +20,11 @@ If LDAP_HOST is blank, authenticate against ADMIN_USERNAME / ADMIN_PASSWORD
 env vars instead. Intended for local development only — not for production.
 """
 
+from __future__ import annotations
+
 import logging
 import os
+from dataclasses import dataclass
 
 from ldap3 import (
     ANONYMOUS,
@@ -35,6 +42,41 @@ log = logging.getLogger(__name__)
 
 # AD OID for transitive (nested) group membership matching
 _MEMBER_OF_RECURSIVE = "memberOf:1.2.840.113556.1.4.1941:"
+
+# Credentials that must never be accepted for the .env fallback login.
+_REJECTED_PASSWORDS = frozenset({
+    "",
+    "change-this-password",
+    "changeme",
+    "password",
+    "admin",
+    "your_password",
+    "secret",
+})
+
+
+@dataclass(frozen=True)
+class AuthResult:
+    """Successful authentication result."""
+
+    username: str
+    display_name: str
+    is_admin: bool
+
+
+def validate_startup_config() -> None:
+    """Halt the process if production is misconfigured.
+
+    Raises RuntimeError (caught at startup) when APP_ENV=production and
+    LDAP_HOST is missing.
+    """
+    app_env = os.getenv("APP_ENV", "development").strip().lower()
+    ldap_host = os.getenv("LDAP_HOST", "").strip()
+    if app_env == "production" and not ldap_host:
+        raise RuntimeError(
+            "APP_ENV=production requires LDAP_HOST to be set. "
+            "Configure LDAP before deploying, or set APP_ENV=development for local use."
+        )
 
 
 def _search(conn: Connection, **kwargs):
@@ -80,41 +122,61 @@ def _ldap_socket_timeouts() -> tuple[int, int]:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def authenticate_user(username: str, password: str) -> bool:
-    """Return True if credentials are valid and the user is in the admin group."""
+def authenticate_user(username: str, password: str) -> AuthResult | None:
+    """Authenticate and resolve portal vs admin access.
+
+    Returns an AuthResult on success, or None if credentials are invalid or
+    the user is not in Portal Users / Portal Admin.
+    """
     if not username or not password:
-        return False
+        return None
 
     ldap_host = os.getenv("LDAP_HOST", "").strip()
     if not ldap_host:
         log.debug("LDAP_HOST not set — using ADMIN_USERNAME / ADMIN_PASSWORD fallback")
         return _check_env_credentials(username, password)
 
-    return _ldap_bind(username, password, ldap_host)
+    return _ldap_authenticate(username, password, ldap_host)
 
 
-def admin_auth_uses_env_fallback() -> bool:
-    """True when admin sign-in uses .env credentials instead of LDAP."""
+def auth_uses_env_fallback() -> bool:
+    """True when sign-in uses .env credentials instead of LDAP."""
     return not os.getenv("LDAP_HOST", "").strip()
+
+
+# Backward-compatible alias
+admin_auth_uses_env_fallback = auth_uses_env_fallback
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
-def _check_env_credentials(username: str, password: str) -> bool:
-    admin_user = os.getenv("ADMIN_USERNAME", "admin")
+def _check_env_credentials(username: str, password: str) -> AuthResult | None:
+    admin_user = os.getenv("ADMIN_USERNAME", "").strip()
     admin_pass = os.getenv("ADMIN_PASSWORD", "")
-    return bool(admin_pass) and username == admin_user and password == admin_pass
+
+    if not admin_user or not admin_pass:
+        log.warning("Dev auth rejected: ADMIN_USERNAME / ADMIN_PASSWORD must both be set")
+        return None
+    if admin_pass.strip().lower() in _REJECTED_PASSWORDS or admin_pass in _REJECTED_PASSWORDS:
+        log.warning("Dev auth rejected: ADMIN_PASSWORD is empty or a known default value")
+        return None
+    if username != admin_user or password != admin_pass:
+        return None
+
+    log.info("Dev auth OK (env fallback): %s", admin_user)
+    return AuthResult(username=admin_user, display_name=admin_user, is_admin=True)
 
 
-def _ldap_bind(username: str, password: str, ldap_host: str) -> bool:
-    ldap_domain   = os.getenv("LDAP_DOMAIN",    "").strip()
-    ldap_port     = int(os.getenv("LDAP_PORT",  "389"))
-    use_ssl       = ldap_port == 636
-    ldap_base_dn  = os.getenv("LDAP_BASE_DN",   "").strip()
-    ldap_admin_group = os.getenv("LDAP_ADMIN_GROUP", "").strip()
+def _ldap_authenticate(username: str, password: str, ldap_host: str) -> AuthResult | None:
+    ldap_domain = os.getenv("LDAP_DOMAIN", "").strip()
+    ldap_port = int(os.getenv("LDAP_PORT", "389"))
+    use_ssl = ldap_port == 636
+    ldap_base_dn = os.getenv("LDAP_BASE_DN", "").strip()
+    users_group = os.getenv("LDAP_USERS_GROUP", "").strip()
+    admin_group = os.getenv("LDAP_ADMIN_GROUP", "").strip()
 
     # Strip domain suffix if the user typed user@domain instead of just user
-    sam_account   = username.split("@")[0]
+    sam_account = username.split("@")[0].split("\\")[-1]
     user_principal = f"{sam_account}@{ldap_domain}" if ldap_domain else sam_account
 
     connect_t, receive_t = _ldap_socket_timeouts()
@@ -146,14 +208,18 @@ def _ldap_bind(username: str, password: str, ldap_host: str) -> bool:
         )
     except LDAPException as exc:
         log.warning("LDAP bind failed for %s: %s: %s", user_principal, type(exc).__name__, exc)
-        return False
+        return None
 
     log.debug("LDAP bind succeeded for %s", user_principal)
 
-    if not (ldap_admin_group and ldap_base_dn):
+    if not ldap_base_dn or not (users_group or admin_group):
         conn.unbind()
-        log.info("LDAP admin login OK (no group check configured): %s", user_principal)
-        return True
+        log.error(
+            "LDAP login denied for %s: LDAP_BASE_DN and at least one of "
+            "LDAP_USERS_GROUP / LDAP_ADMIN_GROUP must be configured",
+            user_principal,
+        )
+        return None
 
     # Naming contexts: prefer ldap3's DSA info (filled during bind when get_info=DSA).
     root_info = _naming_info_from_ldap3_server(server)
@@ -173,25 +239,44 @@ def _ldap_bind(username: str, password: str, ldap_host: str) -> bool:
     if not default_nc and not naming_ctx:
         log.debug("RootDSE had no naming info; using LDAP_BASE_DN / derived bases")
 
-    log.debug("LDAP group check against %s", ldap_admin_group)
-    in_group = _is_in_group(
-        server,
-        conn,
-        ldap_base_dn,
-        ldap_admin_group,
-        sam_account,
-        user_principal,
-        ldap_domain=ldap_domain,
-        default_nc=default_nc,
-        naming_contexts=naming_ctx,
-    )
+    def _check(group_dn: str) -> bool:
+        if not group_dn:
+            return False
+        log.debug("LDAP group check against %s", group_dn)
+        return _is_in_group(
+            server,
+            conn,
+            ldap_base_dn,
+            group_dn,
+            sam_account,
+            user_principal,
+            ldap_domain=ldap_domain,
+            default_nc=default_nc,
+            naming_contexts=naming_ctx,
+        )
+
+    in_admin = _check(admin_group)
+    in_users = True if in_admin else _check(users_group)
     conn.unbind()
 
-    if in_group:
-        log.info("LDAP admin login OK: %s", user_principal)
-    else:
-        log.warning("LDAP admin denied (not in allowed group): %s", user_principal)
-    return in_group
+    if not (in_users or in_admin):
+        log.warning(
+            "LDAP login denied (not in Portal Users or Portal Admin): %s",
+            user_principal,
+        )
+        return None
+
+    result = AuthResult(
+        username=sam_account,
+        display_name=sam_account,
+        is_admin=in_admin,
+    )
+    log.info(
+        "LDAP login OK: %s (admin=%s)",
+        user_principal,
+        result.is_admin,
+    )
+    return result
 
 
 def _is_in_group(

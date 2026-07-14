@@ -4,9 +4,8 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from auth import authenticate_user, admin_auth_uses_env_fallback
 from config_store import get_config, get_offices, get_preset_flags, template_context
-from deps import require_admin
+from deps import get_session_user, require_admin
 from preset_store import get_presets, save_presets
 from preset_validation import validate_presets
 
@@ -63,8 +62,9 @@ def _parse_preset_form(form) -> dict:
     return preset
 
 
-def _admin_ctx(extra: dict | None = None) -> dict:
+def _admin_ctx(request: Request, extra: dict | None = None) -> dict:
     ctx = template_context()
+    ctx["user"] = get_session_user(request)
     if extra:
         ctx.update(extra)
     return ctx
@@ -72,50 +72,32 @@ def _admin_ctx(extra: dict | None = None) -> dict:
 
 @router.get("/login", response_class=HTMLResponse)
 async def admin_login_get(request: Request):
-    if request.session.get("admin_authenticated"):
-        return RedirectResponse(url="/admin/", status_code=303)
-    return templates.TemplateResponse(request, "admin/login.html", _admin_ctx({
-        "error": None,
-        "env_auth_mode": admin_auth_uses_env_fallback(),
-    }))
+    """Keep old bookmark working — portal login is the front gate."""
+    return RedirectResponse(url="/login?next=/admin/", status_code=303)
 
 
 @router.post("/login")
 async def admin_login_post(request: Request):
-    form = await request.form()
-    username = form.get("username", "").strip()
-    password = form.get("password", "")
-
-    if authenticate_user(username, password):
-        request.session["admin_authenticated"] = True
-        return RedirectResponse(url="/admin/", status_code=303)
-
-    return templates.TemplateResponse(
-        request,
-        "admin/login.html",
-        _admin_ctx({"error": "Invalid username or password.", "env_auth_mode": admin_auth_uses_env_fallback()}),
-        status_code=401,
-    )
+    return RedirectResponse(url="/login?next=/admin/", status_code=303)
 
 
 @router.post("/logout")
 async def admin_logout(request: Request):
-    request.session.pop("admin_authenticated", None)
-    return RedirectResponse(url="/admin/login", status_code=303)
+    return RedirectResponse(url="/logout", status_code=307)
 
 
 @router.get("/", response_class=HTMLResponse)
-async def admin_index(request: Request, _: bool = Depends(require_admin)):
+async def admin_index(request: Request, _: dict = Depends(require_admin)):
     presets = get_presets()
-    return templates.TemplateResponse(request, "admin/index.html", _admin_ctx({
+    return templates.TemplateResponse(request, "admin/index.html", _admin_ctx(request, {
         "presets": presets,
         "preset_flags": get_preset_flags(),
     }))
 
 
 @router.get("/new", response_class=HTMLResponse)
-async def admin_new_get(request: Request, _: bool = Depends(require_admin)):
-    return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx({
+async def admin_new_get(request: Request, _: dict = Depends(require_admin)):
+    return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx(request, {
         "preset": {},
         "role_name": "",
         "is_edit": False,
@@ -125,14 +107,14 @@ async def admin_new_get(request: Request, _: bool = Depends(require_admin)):
 
 
 @router.post("/new")
-async def admin_new_post(request: Request, _: bool = Depends(require_admin)):
+async def admin_new_post(request: Request, _: dict = Depends(require_admin)):
     form = await request.form()
     role_name = form.get("role_name", "").strip()
     opts = _form_options()
     parsed = _parse_preset_form(form)
 
     if not role_name:
-        return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx({
+        return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx(request, {
             "preset": {},
             "role_name": "",
             "is_edit": False,
@@ -142,7 +124,7 @@ async def admin_new_post(request: Request, _: bool = Depends(require_admin)):
 
     presets = get_presets()
     if role_name in presets:
-        return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx({
+        return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx(request, {
             "preset": {},
             "role_name": role_name,
             "is_edit": False,
@@ -152,7 +134,7 @@ async def admin_new_post(request: Request, _: bool = Depends(require_admin)):
 
     errors = validate_presets({role_name: parsed}, get_config())
     if errors:
-        return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx({
+        return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx(request, {
             "preset": parsed,
             "role_name": role_name,
             "is_edit": False,
@@ -169,7 +151,7 @@ async def admin_new_post(request: Request, _: bool = Depends(require_admin)):
 async def admin_edit_get(
     role_name: str,
     request: Request,
-    _: bool = Depends(require_admin),
+    _: dict = Depends(require_admin),
 ):
     role_name = unquote(role_name)
     presets = get_presets()
@@ -177,7 +159,7 @@ async def admin_edit_get(
     if preset is None:
         return RedirectResponse(url="/admin/")
 
-    return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx({
+    return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx(request, {
         "preset": preset,
         "role_name": role_name,
         "is_edit": True,
@@ -190,7 +172,7 @@ async def admin_edit_get(
 async def admin_edit_post(
     role_name: str,
     request: Request,
-    _: bool = Depends(require_admin),
+    _: dict = Depends(require_admin),
 ):
     role_name = unquote(role_name)
     presets = get_presets()
@@ -201,7 +183,7 @@ async def admin_edit_post(
     parsed = _parse_preset_form(form)
     errors = validate_presets({role_name: parsed}, get_config())
     if errors:
-        return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx({
+        return templates.TemplateResponse(request, "admin/preset_form.html", _admin_ctx(request, {
             "preset": parsed,
             "role_name": role_name,
             "is_edit": True,
@@ -218,7 +200,7 @@ async def admin_edit_post(
 async def admin_delete(
     role_name: str,
     request: Request,
-    _: bool = Depends(require_admin),
+    _: dict = Depends(require_admin),
 ):
     role_name = unquote(role_name)
     presets = get_presets()

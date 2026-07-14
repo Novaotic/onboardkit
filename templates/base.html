@@ -14,7 +14,17 @@
         <span class="site-header__logo">&#128203;</span>
         <span>{{ app_name }}</span>
       </a>
-      <a href="/admin" class="site-header__admin">Admin</a>
+      <div class="site-header__nav">
+        {% if user and user.is_admin %}
+        <a href="/admin" class="site-header__admin">Admin</a>
+        {% endif %}
+        {% if user %}
+        <span class="site-header__user" title="Signed in">{{ user.display_name or user.username }}</span>
+        <form method="post" action="/logout" class="site-header__logout">
+          <button type="submit" class="site-header__logout-btn">Sign out</button>
+        </form>
+        {% endif %}
+      </div>
     </div>
   </header>
 

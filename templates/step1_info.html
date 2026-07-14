@@ -47,9 +47,12 @@
              value="{{ data.get('start_date', '') }}" required>
     </div>
     <div class="form-group form-group--required">
-      <label for="manager_name">Requesting Manager / Supervisor</label>
+      <label for="manager_name">Requester</label>
       <input type="text" id="manager_name" name="manager_name"
-             value="{{ data.get('manager_name', '') }}" required>
+             value="{{ data.get('manager_name', '') }}" readonly
+             aria-readonly="true" title="Filled from your signed-in account"
+             style="background:var(--gray-100);cursor:default">
+      <span class="hint" style="display:block;margin-top:.3rem">Filled automatically from your signed-in account.</span>
     </div>
   </div>
 

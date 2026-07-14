@@ -2,6 +2,7 @@
 .env
 config.json
 presets.json
+CHECKLIST.md
 
 # Python
 __pycache__/
