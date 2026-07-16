@@ -15,7 +15,7 @@ services:
       LDAP_BASE_DN: dc=example,dc=org
       LDAP_BIND_DN: cn=admin,dc=example,dc=org
       LDAP_BIND_PASSWORD: admin
-      # Seed matching groups in OpenLDAP (or change these DNs to match your LDIF).
+      # Must match group DNs in ldap/bootstrap/50-onboardkit.ldif
       LDAP_USERS_GROUP: cn=Portal Users,ou=groups,dc=example,dc=org
       LDAP_ADMIN_GROUP: cn=Portal Admin,ou=groups,dc=example,dc=org
     depends_on:
@@ -44,6 +44,11 @@ services:
       LDAP_ADMIN_PASSWORD: admin
       # Plain LDAP on 389 — matches the app's non-TLS bind for local testing.
       LDAP_TLS: "false"
+    volumes:
+      # Seed OUs, test users, and Portal Users / Portal Admin (first start only).
+      - ./ldap/bootstrap:/container/service/slapd/assets/config/bootstrap/ldif/custom
+      - ldap-data:/var/lib/ldap
+      - ldap-config:/etc/ldap/slapd.d
     healthcheck:
       test:
         [
@@ -67,3 +72,7 @@ services:
       timeout: 5s
       retries: 10
       start_period: 15s
+
+volumes:
+  ldap-data:
+  ldap-config:

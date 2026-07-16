@@ -1,0 +1,57 @@
+# Seed data loaded by osixia/openldap on first container start only.
+# Mounted at: /container/service/slapd/assets/config/bootstrap/ldif/custom
+#
+# Test accounts (password for both: password123):
+#   portaluser  — member of Portal Users only
+#   portaladmin — member of Portal Users + Portal Admin
+#
+# To re-apply after changing this file:
+#   docker compose down -v
+#   docker compose up --build
+
+dn: ou=users,dc=example,dc=org
+objectClass: organizationalUnit
+ou: users
+
+dn: ou=groups,dc=example,dc=org
+objectClass: organizationalUnit
+ou: groups
+
+dn: uid=portaluser,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: Portal User
+sn: User
+uid: portaluser
+uidNumber: 10001
+gidNumber: 10000
+homeDirectory: /home/portaluser
+loginShell: /bin/bash
+mail: portaluser@example.org
+userPassword: password123
+
+dn: uid=portaladmin,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: Portal Admin
+sn: Admin
+uid: portaladmin
+uidNumber: 10002
+gidNumber: 10000
+homeDirectory: /home/portaladmin
+loginShell: /bin/bash
+mail: portaladmin@example.org
+userPassword: password123
+
+dn: cn=Portal Users,ou=groups,dc=example,dc=org
+objectClass: groupOfNames
+cn: Portal Users
+member: uid=portaluser,ou=users,dc=example,dc=org
+member: uid=portaladmin,ou=users,dc=example,dc=org
+
+dn: cn=Portal Admin,ou=groups,dc=example,dc=org
+objectClass: groupOfNames
+cn: Portal Admin
+member: uid=portaladmin,ou=users,dc=example,dc=org

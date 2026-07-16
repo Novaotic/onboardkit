@@ -38,9 +38,25 @@ docker compose up --build
 
 The web service waits until OpenLDAP reports healthy (`ldapsearch` bind succeeds) before starting, so early login attempts are less likely to hit a half-booted directory.
 
-**LDAP groups:** the OpenLDAP image does not create `Portal Users` / `Portal Admin` for you. Seed those groups (and members) to match the DNs in compose, or change `LDAP_USERS_GROUP` / `LDAP_ADMIN_GROUP` to groups you add.
+### Seeded LDAP test data
 
-**Env-only login inside Docker** (no directory): temporarily clear LDAP in compose overrides, or run:
+On **first** start, `ldap/bootstrap/50-onboardkit.ldif` is loaded into OpenLDAP:
+
+| Account | Password | Groups |
+|---------|----------|--------|
+| `portaluser` | `password123` | Portal Users |
+| `portaladmin` | `password123` | Portal Users + Portal Admin |
+
+Directory admin (for `ldapsearch` / tooling): `cn=admin,dc=example,dc=org` / `admin`.
+
+Bootstrap runs only when the LDAP data volumes are empty. After editing the LDIF, re-seed with:
+
+```powershell
+docker compose down -v
+docker compose up --build
+```
+
+**Note:** OnboardKit’s login path is Active Directory–shaped (UPN bind, `sAMAccountName`, AD `memberOf`). This OpenLDAP seed is for directory structure and ops testing. For a reliable UI smoke test without fighting AD vs OpenLDAP differences, use env-only login:
 
 ```powershell
 docker compose run --rm -e LDAP_HOST= -e ADMIN_USERNAME=admin -e ADMIN_PASSWORD=your-local-pass -p 8000:8000 web
@@ -48,7 +64,7 @@ docker compose run --rm -e LDAP_HOST= -e ADMIN_USERNAME=admin -e ADMIN_PASSWORD=
 
 Use a non-default `ADMIN_PASSWORD` — empty and known placeholders are rejected.
 
-Stop the stack with `Ctrl+C`, or `docker compose down`.
+Stop the stack with `Ctrl+C`, or `docker compose down` (add `-v` to wipe LDAP volumes).
 
 ## Quick start (native Python)
 
@@ -146,6 +162,7 @@ onboardkit/
 ├── email_service.py     # HTML checklist email
 ├── Dockerfile           # App image (uvicorn on :8000)
 ├── docker-compose.yml   # App + OpenLDAP for local testing
+├── ldap/bootstrap/      # OpenLDAP seed LDIF (Portal Users / Admin)
 └── templates/           # Jinja2 wizard and admin UI
 ```
 
