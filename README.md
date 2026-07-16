@@ -40,7 +40,7 @@ The web service waits until OpenLDAP reports healthy (`ldapsearch` bind succeeds
 
 ### Seeded LDAP test data
 
-On **first** start, `ldap/bootstrap/50-onboardkit.ldif` is loaded into OpenLDAP:
+On startup, the `ldap-seed` one-shot service loads `ldap/bootstrap/50-onboardkit.ldif` into OpenLDAP (after slapd is healthy). This avoids osixia’s bootstrap bind-mount path, which fails on Windows Docker.
 
 | Account | Password | Groups |
 |---------|----------|--------|
@@ -49,17 +49,16 @@ On **first** start, `ldap/bootstrap/50-onboardkit.ldif` is loaded into OpenLDAP:
 
 Directory admin (for `ldapsearch` / tooling): `cn=admin,dc=example,dc=org` / `admin`.
 
-Bootstrap runs only when the LDAP data volumes are empty. After editing the LDIF, re-seed with:
+Seed is skipped if `ou=users` already exists. After editing the LDIF, re-seed with:
 
 ```powershell
 docker compose down -v
 docker compose up --build
 ```
-
 **Note:** OnboardKit’s login path is Active Directory–shaped (UPN bind, `sAMAccountName`, AD `memberOf`). This OpenLDAP seed is for directory structure and ops testing. For a reliable UI smoke test without fighting AD vs OpenLDAP differences, use env-only login:
 
 ```powershell
-docker compose run --rm -e LDAP_HOST= -e ADMIN_USERNAME=admin -e ADMIN_PASSWORD=your-local-pass -p 8000:8000 web
+docker compose run --rm -e LDAP_HOST="" -e ADMIN_USERNAME=admin -e ADMIN_PASSWORD=your-local-pass -p 8000:8000 web
 ```
 
 Use a non-default `ADMIN_PASSWORD` — empty and known placeholders are rejected.

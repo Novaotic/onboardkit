@@ -21,6 +21,8 @@ services:
     depends_on:
       ldap-server:
         condition: service_healthy
+      ldap-seed:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
@@ -45,8 +47,6 @@ services:
       # Plain LDAP on 389 — matches the app's non-TLS bind for local testing.
       LDAP_TLS: "false"
     volumes:
-      # Seed OUs, test users, and Portal Users / Portal Admin (first start only).
-      - ./ldap/bootstrap:/container/service/slapd/assets/config/bootstrap/ldif/custom
       - ldap-data:/var/lib/ldap
       - ldap-config:/etc/ldap/slapd.d
     healthcheck:
@@ -72,6 +72,33 @@ services:
       timeout: 5s
       retries: 10
       start_period: 15s
+
+  # osixia bootstrap bind-mounts break on Windows (sed -i / rm on the mount).
+  # Seed after slapd is healthy instead.
+  ldap-seed:
+    image: osixia/openldap:1.5.0
+    depends_on:
+      ldap-server:
+        condition: service_healthy
+    volumes:
+      - ./ldap/bootstrap/50-onboardkit.ldif:/seed.ldif:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -e
+        if ldapsearch -x -H ldap://ldap-server:389 \
+            -D "cn=admin,dc=example,dc=org" -w admin \
+            -b "ou=users,dc=example,dc=org" -s base >/dev/null 2>&1; then
+          echo "LDAP seed already present — skipping"
+          exit 0
+        fi
+        # Strip Windows CRLF if the host checkout used CRLF line endings
+        sed 's/\r$//' /seed.ldif > /tmp/seed.ldif
+        ldapadd -x -H ldap://ldap-server:389 \
+          -D "cn=admin,dc=example,dc=org" -w admin \
+          -f /tmp/seed.ldif
+        echo "LDAP seed applied"
+    restart: "no"
 
 volumes:
   ldap-data:

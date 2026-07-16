@@ -1,5 +1,6 @@
 # Seed data loaded by osixia/openldap on first container start only.
-# Mounted at: /container/service/slapd/assets/config/bootstrap/ldif/custom
+# Mounted as a file under bootstrap/ldif/custom/ (do not bind-mount the
+# custom/ directory itself — osixia tries to remove that path after bootstrap).
 #
 # Test accounts (password for both: password123):
 #   portaluser  — member of Portal Users only
