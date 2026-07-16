@@ -6,11 +6,12 @@ from fastapi.templating import Jinja2Templates
 
 from config_store import get_config, get_offices, get_preset_flags, template_context
 from deps import get_session_user, require_admin
+from paths import TEMPLATES_DIR
 from preset_store import get_presets, save_presets
 from preset_validation import validate_presets
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
 def _form_options() -> dict:

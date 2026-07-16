@@ -5,14 +5,11 @@ from __future__ import annotations
 import json
 import logging
 import shutil
-from pathlib import Path
 from typing import Any
 
-log = logging.getLogger(__name__)
+from paths import CONFIG_EXAMPLE, CONFIG_FILE
 
-APP_DIR = Path(__file__).parent
-CONFIG_FILE = APP_DIR / "config.json"
-CONFIG_EXAMPLE = APP_DIR / "config.example.json"
+log = logging.getLogger(__name__)
 
 _OPTION_GROUPS = ("hardware", "software", "portals", "mailboxes")
 _config: dict[str, Any] | None = None

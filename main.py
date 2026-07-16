@@ -9,7 +9,9 @@ from config_store import get_config
 
 from dotenv import load_dotenv
 
-load_dotenv()
+from paths import ENV_FILE, STATIC_DIR, TEMPLATES_DIR
+
+load_dotenv(ENV_FILE)
 
 _level_name = os.getenv("LOG_LEVEL", "INFO").strip().upper()
 _root_level = getattr(logging, _level_name, logging.INFO)
@@ -69,8 +71,8 @@ app.add_middleware(
     secret_key=os.getenv("SECRET_KEY", "dev-secret-change-me"),
     max_age=7200,
 )
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 app.include_router(admin_router)
 
 TOTAL_STEPS = 6

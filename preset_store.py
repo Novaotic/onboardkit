@@ -1,10 +1,7 @@
 import json
 import shutil
-from pathlib import Path
 
-APP_DIR = Path(__file__).parent
-PRESETS_FILE = APP_DIR / "presets.json"
-PRESETS_EXAMPLE = APP_DIR / "presets.example.json"
+from paths import PRESETS_EXAMPLE, PRESETS_FILE
 
 
 def get_presets() -> dict:
