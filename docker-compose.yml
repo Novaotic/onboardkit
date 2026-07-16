@@ -19,7 +19,20 @@ services:
       LDAP_USERS_GROUP: cn=Portal Users,ou=groups,dc=example,dc=org
       LDAP_ADMIN_GROUP: cn=Portal Admin,ou=groups,dc=example,dc=org
     depends_on:
-      - ldap-server
+      ldap-server:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/login', timeout=3)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   ldap-server:
     image: osixia/openldap:1.5.0
@@ -29,3 +42,28 @@ services:
       LDAP_ORGANISATION: OnboardKit Test
       LDAP_DOMAIN: example.org
       LDAP_ADMIN_PASSWORD: admin
+      # Plain LDAP on 389 — matches the app's non-TLS bind for local testing.
+      LDAP_TLS: "false"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "ldapsearch",
+          "-x",
+          "-H",
+          "ldap://127.0.0.1:389",
+          "-b",
+          "dc=example,dc=org",
+          "-D",
+          "cn=admin,dc=example,dc=org",
+          "-w",
+          "admin",
+          "-LLL",
+          "-s",
+          "base",
+          "(objectClass=*)",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s

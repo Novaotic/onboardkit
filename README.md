@@ -36,6 +36,8 @@ docker compose up --build
 
 `docker-compose.yml` loads `.env`, then overrides LDAP settings so the app talks to the `ldap-server` container (`LDAP_HOST=ldap-server`, Portal Users / Portal Admin group DNs, bind as `cn=admin,dc=example,dc=org`).
 
+The web service waits until OpenLDAP reports healthy (`ldapsearch` bind succeeds) before starting, so early login attempts are less likely to hit a half-booted directory.
+
 **LDAP groups:** the OpenLDAP image does not create `Portal Users` / `Portal Admin` for you. Seed those groups (and members) to match the DNs in compose, or change `LDAP_USERS_GROUP` / `LDAP_ADMIN_GROUP` to groups you add.
 
 **Env-only login inside Docker** (no directory): temporarily clear LDAP in compose overrides, or run:
