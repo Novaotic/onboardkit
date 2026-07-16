@@ -1,0 +1,31 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Compose overrides point the app at the local OpenLDAP sidecar.
+      APP_ENV: development
+      LOG_LEVEL: DEBUG
+      LDAP_HOST: ldap-server
+      LDAP_DOMAIN: example.org
+      LDAP_PORT: "389"
+      LDAP_BASE_DN: dc=example,dc=org
+      LDAP_BIND_DN: cn=admin,dc=example,dc=org
+      LDAP_BIND_PASSWORD: admin
+      # Seed matching groups in OpenLDAP (or change these DNs to match your LDIF).
+      LDAP_USERS_GROUP: cn=Portal Users,ou=groups,dc=example,dc=org
+      LDAP_ADMIN_GROUP: cn=Portal Admin,ou=groups,dc=example,dc=org
+    depends_on:
+      - ldap-server
+
+  ldap-server:
+    image: osixia/openldap:1.5.0
+    ports:
+      - "389:389"
+    environment:
+      LDAP_ORGANISATION: OnboardKit Test
+      LDAP_DOMAIN: example.org
+      LDAP_ADMIN_PASSWORD: admin
