@@ -10,6 +10,19 @@
       The IT checklist for <strong>{{ employee_name }}</strong> has been emailed to {{ it_team_label }}.
       They will follow up with any questions.
     </p>
+    <a href="/start" class="btn btn--primary" style="margin-top:2rem">Start a New Request</a>
+  {% elif email_sent %}
+    <div class="submitted-icon submitted-icon--error">&#9888;</div>
+    <h1 class="submitted-title">Email Sent, Inventory Not Saved</h1>
+    <p class="submitted-body">
+      The checklist for <strong>{{ employee_name }}</strong> was emailed to {{ it_team_label }},
+      but the employee could not be saved to inventory. Your form answers are still in this
+      session — go back to confirmation and try again.
+    </p>
+    {% if error %}
+    <pre class="error-detail">{{ error }}</pre>
+    {% endif %}
+    <a href="/confirmation" class="btn btn--primary" style="margin-top:2rem">Back to confirmation</a>
   {% else %}
     <div class="submitted-icon submitted-icon--error">&#9888;</div>
     <h1 class="submitted-title">Email Not Sent</h1>
@@ -22,10 +35,6 @@
     <pre class="error-detail">{{ error }}</pre>
     {% endif %}
     <a href="/confirmation" class="btn btn--primary" style="margin-top:2rem">Back to confirmation</a>
-  {% endif %}
-
-  {% if success %}
-  <a href="/start" class="btn btn--primary" style="margin-top:2rem">Start a New Request</a>
   {% endif %}
 </div>
 {% endblock %}

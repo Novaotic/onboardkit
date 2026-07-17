@@ -83,8 +83,31 @@ def test_failed_submit_keeps_wizard_and_skips_persist(authed_client, monkeypatch
 
     response = authed_client.post("/submit", follow_redirects=False)
     assert response.status_code == 200
-    assert "SMTP unavailable" in response.text or "success" in response.text.lower()
+    assert "SMTP unavailable" in response.text or "Email Not Sent" in response.text
 
+    assert list_all_employees() == []
+
+    confirm = authed_client.get("/confirmation", follow_redirects=False)
+    assert confirm.status_code == 200
+    assert "Casey" in confirm.text
+
+
+def test_persist_failure_keeps_wizard_after_email(authed_client, monkeypatch):
+    monkeypatch.setattr(
+        "main.send_it_checklist",
+        lambda _final: (True, None),
+    )
+
+    def _boom(**_kwargs):
+        raise RuntimeError("disk full")
+
+    monkeypatch.setattr("main.upsert_employee", _boom)
+    _fill_minimal_wizard(authed_client)
+
+    response = authed_client.post("/submit", follow_redirects=False)
+    assert response.status_code == 200
+    assert "Request Sent!" not in response.text
+    assert "Inventory Not Saved" in response.text
     assert list_all_employees() == []
 
     confirm = authed_client.get("/confirmation", follow_redirects=False)

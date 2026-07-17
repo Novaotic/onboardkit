@@ -461,22 +461,31 @@ async def submit_form(request: Request, user: dict = Depends(require_user)):
         return RedirectResponse(url="/step/1")
     final = build_final_json(request.session)
     employee_name = f"{final['employee']['first_name']} {final['employee']['last_name']}"
-    success, error = send_it_checklist(final)
-    if success:
+    email_ok, error = send_it_checklist(final)
+    persisted = False
+    if email_ok:
         try:
             upsert_employee(
                 username=user.get("username", ""),
                 display=_requester_name(user),
                 payload=final,
             )
+            persisted = True
+            _clear_wizard(request.session)
         except Exception:
             log.exception(
                 "Email sent but failed to persist employee inventory for %s",
                 employee_name,
             )
-        _clear_wizard(request.session)
+            error = (
+                "The IT checklist email was sent, but saving this employee to "
+                "inventory failed. Your form answers are still in this session — "
+                "try again from confirmation, or contact IT if this keeps happening."
+            )
+    success = email_ok and persisted
     return templates.TemplateResponse(request, "submitted.html", _ctx(request, {
         "success": success,
+        "email_sent": email_ok,
         "error": error,
         "employee_name": employee_name,
     }))
