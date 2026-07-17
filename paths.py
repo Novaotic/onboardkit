@@ -20,3 +20,7 @@ CONFIG_SCHEMA = APP_DIR / "config.schema.json"
 
 PRESETS_FILE = APP_DIR / "presets.json"
 PRESETS_EXAMPLE = APP_DIR / "presets.example.json"
+
+# SQLite current-state inventory (WAL creates .db-wal / .db-shm beside the .db)
+DATA_DIR = APP_DIR / "data"
+DB_FILE = DATA_DIR / "onboardkit.db"

@@ -12,6 +12,15 @@ def _safe_app_env(monkeypatch):
     monkeypatch.setenv("APP_ENV", "development")
 
 
+@pytest.fixture(autouse=True)
+def _temp_employee_db(tmp_path, monkeypatch):
+    """Isolate SQLite (and WAL sidecars) per test under a writable temp dir."""
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    monkeypatch.setattr("paths.DATA_DIR", data_dir)
+    monkeypatch.setattr("paths.DB_FILE", data_dir / "onboardkit.db")
+
+
 @pytest.fixture
 def env_auth(monkeypatch):
     """Configure the local .env credential fallback (no LDAP)."""

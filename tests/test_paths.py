@@ -8,6 +8,8 @@ from paths import (
     APP_DIR,
     CONFIG_EXAMPLE,
     CONFIG_SCHEMA,
+    DATA_DIR,
+    DB_FILE,
     ENV_FILE,
     PRESETS_EXAMPLE,
     STATIC_DIR,
@@ -36,6 +38,12 @@ def test_paths_join_with_pathlib_not_slash_strings():
     assert joined == STATIC_DIR / "style.css"
     assert isinstance(joined, Path)
     assert joined.exists()
+
+
+def test_sqlite_paths_under_app_data_dir():
+    assert DATA_DIR == APP_DIR / "data"
+    assert DB_FILE == DATA_DIR / "onboardkit.db"
+    assert DB_FILE.parent == DATA_DIR
 
 
 def test_env_file_lives_beside_app(tmp_path, monkeypatch):

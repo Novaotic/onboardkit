@@ -34,6 +34,7 @@ from config_store import (
     template_context,
 )
 from preset_store import get_presets, init_store
+from employee_store import init_db, upsert_employee
 from email_service import send_it_checklist
 from admin import router as admin_router
 from auth import authenticate_user, auth_uses_env_fallback, validate_startup_config
@@ -53,6 +54,7 @@ async def lifespan(app: FastAPI):
         raise SystemExit(1) from exc
     init_config()
     init_store()
+    init_db()
     errors = validate_presets(get_presets(), get_config())
     for msg in errors:
         log.warning("Preset validation: %s", msg)
@@ -460,7 +462,19 @@ async def submit_form(request: Request, user: dict = Depends(require_user)):
     final = build_final_json(request.session)
     employee_name = f"{final['employee']['first_name']} {final['employee']['last_name']}"
     success, error = send_it_checklist(final)
-    _clear_wizard(request.session)
+    if success:
+        try:
+            upsert_employee(
+                username=user.get("username", ""),
+                display=_requester_name(user),
+                payload=final,
+            )
+        except Exception:
+            log.exception(
+                "Email sent but failed to persist employee inventory for %s",
+                employee_name,
+            )
+        _clear_wizard(request.session)
     return templates.TemplateResponse(request, "submitted.html", _ctx(request, {
         "success": success,
         "error": error,

@@ -4,6 +4,9 @@ config.json
 presets.json
 CHECKLIST.md
 
+# SQLite inventory (includes WAL sidecars .db-wal / .db-shm)
+data/
+
 # Python
 __pycache__/
 *.py[cod]

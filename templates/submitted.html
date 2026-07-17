@@ -14,14 +14,18 @@
     <div class="submitted-icon submitted-icon--error">&#9888;</div>
     <h1 class="submitted-title">Email Not Sent</h1>
     <p class="submitted-body">
-      The request was completed, but the confirmation email could not be delivered.
-      Please forward the details manually or check the SMTP settings in <code>.env</code>.
+      The confirmation email could not be delivered, so this request was not saved
+      to inventory yet. Your form answers are still in this session — go back to
+      confirmation and try again, or check the SMTP settings in <code>.env</code>.
     </p>
     {% if error %}
     <pre class="error-detail">{{ error }}</pre>
     {% endif %}
+    <a href="/confirmation" class="btn btn--primary" style="margin-top:2rem">Back to confirmation</a>
   {% endif %}
 
+  {% if success %}
   <a href="/start" class="btn btn--primary" style="margin-top:2rem">Start a New Request</a>
+  {% endif %}
 </div>
 {% endblock %}
