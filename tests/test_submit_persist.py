@@ -55,7 +55,7 @@ def _fill_minimal_wizard(client) -> None:
 def test_successful_submit_persists_and_clears_wizard(authed_client, monkeypatch):
     monkeypatch.setattr(
         "main.send_it_checklist",
-        lambda _final: (True, None),
+        lambda _final, **_kwargs: (True, None),
     )
     _fill_minimal_wizard(authed_client)
 
@@ -77,7 +77,7 @@ def test_successful_submit_persists_and_clears_wizard(authed_client, monkeypatch
 def test_failed_submit_keeps_wizard_and_skips_persist(authed_client, monkeypatch):
     monkeypatch.setattr(
         "main.send_it_checklist",
-        lambda _final: (False, "SMTP unavailable"),
+        lambda _final, **_kwargs: (False, "SMTP unavailable"),
     )
     _fill_minimal_wizard(authed_client)
 
@@ -95,7 +95,7 @@ def test_failed_submit_keeps_wizard_and_skips_persist(authed_client, monkeypatch
 def test_persist_failure_keeps_wizard_after_email(authed_client, monkeypatch):
     monkeypatch.setattr(
         "main.send_it_checklist",
-        lambda _final: (True, None),
+        lambda _final, **_kwargs: (True, None),
     )
 
     def _boom(**_kwargs):
@@ -118,7 +118,7 @@ def test_persist_failure_keeps_wizard_after_email(authed_client, monkeypatch):
 def test_second_onboard_same_name_upserts_for_owner(authed_client, monkeypatch):
     monkeypatch.setattr(
         "main.send_it_checklist",
-        lambda _final: (True, None),
+        lambda _final, **_kwargs: (True, None),
     )
     _fill_minimal_wizard(authed_client)
     authed_client.post("/submit", follow_redirects=False)

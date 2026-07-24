@@ -3,17 +3,30 @@
 
 {% block content %}
 <div class="home-hero">
-  <h1 class="home-hero__title">New Hire IT Request</h1>
+  <h1 class="home-hero__title">IT Request Portal</h1>
   <p class="home-hero__lead">
-    {{ tagline or "Submit one guided form for hardware, software, email groups, and access. Your role preset fills in the right defaults—you can adjust before sending." }}
-  </p>
-  <div class="home-hero__actions">
-    <a class="btn btn--primary btn--large" href="/start">Start new hire request</a>
-  </div>
-  <p class="home-hero__note">
-    Already started? Your answers are saved in this browser session until you submit or start a new request.
+    {{ tagline or "Submit guided checklists for new hires, role changes, and offboarding. Role presets fill in the defaults—you can adjust before sending." }}
   </p>
 </div>
+
+<div class="home-actions" aria-label="Request types">
+  <a class="home-action" href="/start">
+    <strong class="home-action__title">New hire</strong>
+    <span class="home-action__sub">Onboard hardware, software, and access for a new employee</span>
+  </a>
+  <a class="home-action" href="/transition">
+    <strong class="home-action__title">Role transition</strong>
+    <span class="home-action__sub">Update access when someone moves to a new role</span>
+  </a>
+  <a class="home-action" href="/offboard">
+    <strong class="home-action__title">Offboarding</strong>
+    <span class="home-action__sub">Revoke access and recover hardware when someone leaves</span>
+  </a>
+</div>
+
+<p class="home-hero__note" style="margin-top:1.5rem">
+  Already started a form? Your answers stay in this browser session until you submit or start a new request.
+</p>
 
 <ul class="home-points" aria-label="What to expect">
   <li class="home-points__item">
@@ -27,7 +40,7 @@
     <span class="home-points__icon" aria-hidden="true">&#9881;</span>
     <div>
       <strong>Role-based presets</strong>
-      <span class="home-points__sub">{{ it_team_label }} gets a clear checklist tailored to the hire's role</span>
+      <span class="home-points__sub">{{ it_team_label }} gets a clear checklist tailored to the role</span>
     </div>
   </li>
   <li class="home-points__item">

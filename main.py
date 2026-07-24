@@ -34,7 +34,13 @@ from config_store import (
     template_context,
 )
 from preset_store import get_presets, init_store
-from employee_store import init_db, upsert_employee
+from employee_store import (
+    delete_employee,
+    get_employee,
+    init_db,
+    search_employees,
+    upsert_employee,
+)
 from email_service import send_it_checklist
 from admin import router as admin_router
 from auth import authenticate_user, auth_uses_env_fallback, validate_startup_config
@@ -43,6 +49,8 @@ from deps import get_session_user, require_user
 log = logging.getLogger(__name__)
 
 _WIZARD_KEYS = ("step1", "step2", "step3", "step4", "step5", "step6")
+_FLOW_KEYS = ("flow", "employee_id")
+_VALID_FLOWS = frozenset({"onboard", "transition", "offboard"})
 
 
 @asynccontextmanager
@@ -92,6 +100,91 @@ def _clear_wizard(session: dict) -> None:
     """Clear form-wizard data without signing the user out."""
     for key in _WIZARD_KEYS:
         session.pop(key, None)
+    for key in _FLOW_KEYS:
+        session.pop(key, None)
+
+
+def _session_flow(session: dict) -> str:
+    flow = session.get("flow") or "onboard"
+    return flow if flow in _VALID_FLOWS else "onboard"
+
+
+def _can_access_employee(user: dict, row: dict) -> bool:
+    if user.get("is_admin"):
+        return True
+    return row.get("requested_by_username") == user.get("username")
+
+
+def _begin_flow(session: dict, flow: str, employee_id: str | None = None) -> None:
+    _clear_wizard(session)
+    session["flow"] = flow if flow in _VALID_FLOWS else "onboard"
+    if employee_id:
+        session["employee_id"] = employee_id
+
+
+def apply_payload_to_session(session: dict, payload: dict) -> None:
+    """Map a stored checklist payload back into wizard session keys."""
+    emp = payload.get("employee") or {}
+    loc = payload.get("location") or {}
+    hw = payload.get("hardware") or {}
+    acc = payload.get("access") or {}
+    eg = payload.get("email_groups") or {}
+    sec = payload.get("security") or {}
+
+    title = (emp.get("title") or "").strip()
+    if title and title in get_presets():
+        step_title, custom_title = title, ""
+    else:
+        step_title, custom_title = ("Other", title) if title else ("", "")
+
+    step1 = {
+        "first_name": emp.get("first_name", ""),
+        "middle_name": emp.get("middle_name", ""),
+        "last_name": emp.get("last_name", ""),
+        "preferred_name": emp.get("preferred_name", ""),
+        "credentials": emp.get("credentials", ""),
+        "start_date": emp.get("start_date", ""),
+        "title": step_title,
+        "custom_title": custom_title,
+        "manager_name": payload.get("requested_by", ""),
+    }
+    if employee_field_enabled("student_or_resident"):
+        step1["is_student_or_resident"] = bool(emp.get("is_student_or_resident"))
+    if employee_field_enabled("bilingual"):
+        step1["is_bilingual"] = bool(emp.get("is_bilingual"))
+
+    session["step1"] = step1
+    session["step2"] = {
+        "office": loc.get("office", ""),
+        "area": loc.get("area", ""),
+    }
+    session["step3"] = {
+        "needs_computer": bool(hw.get("needs_computer")),
+        "computer_type": hw.get("computer_type", ""),
+        "monitors": hw.get("monitors", ""),
+        "peripherals": list(hw.get("peripherals") or []),
+    }
+    session["step4"] = {
+        "needs_email": bool(acc.get("needs_email")),
+        "portals": list(acc.get("portals") or []),
+        "software": list(acc.get("software") or []),
+        "other_software": acc.get("other_software", ""),
+        "mobile_access": bool(acc.get("mobile_access")),
+        "network_printers": acc.get("network_printers", ""),
+    }
+    step5 = {
+        "email_groups": eg.get("groups", ""),
+        "mailboxes": list(eg.get("mailboxes") or []),
+        "fax_numbers": eg.get("fax_numbers", ""),
+    }
+    if "role_followup" in eg:
+        step5["role_followup"] = eg.get("role_followup")
+    session["step5"] = step5
+    session["step6"] = {
+        "alarm_code": bool(sec.get("alarm_code")),
+        "alarm_facilities": list(sec.get("alarm_facilities") or []),
+        "gate_access": bool(sec.get("gate_access")),
+    }
 
 
 def _safe_next_url(raw: str | None) -> str:
@@ -266,17 +359,115 @@ async def home(request: Request, user: dict = Depends(require_user)):
 
 @app.get("/start")
 async def start_new_request(request: Request, user: dict = Depends(require_user)):
-    _clear_wizard(request.session)
+    _begin_flow(request.session, "onboard")
+    return RedirectResponse(url="/step/1", status_code=303)
+
+
+def _search_page(
+    request: Request,
+    user: dict,
+    *,
+    flow: str,
+    query: str = "",
+    error: str | None = None,
+):
+    results = []
+    if query.strip():
+        results = search_employees(
+            query,
+            username=user.get("username", ""),
+            is_admin=bool(user.get("is_admin")),
+        )
+    titles = {
+        "transition": "Role Transition",
+        "offboard": "Offboarding",
+    }
+    leads = {
+        "transition": (
+            "Search employees you previously submitted. Admins can search everyone. "
+            "No match? Start a blank form and use a role preset to fill defaults."
+        ),
+        "offboard": (
+            "Search employees you previously submitted. Admins can search everyone. "
+            "No match? Start a blank form describing their current access to revoke."
+        ),
+    }
+    return templates.TemplateResponse(request, "employee_search.html", _ctx(request, {
+        "flow": flow,
+        "page_title": titles.get(flow, flow.title()),
+        "page_lead": leads.get(flow, ""),
+        "query": query,
+        "results": results,
+        "error": error,
+        "blank_url": f"/{flow}/blank",
+    }))
+
+
+@app.get("/transition", response_class=HTMLResponse)
+async def transition_get(request: Request, user: dict = Depends(require_user)):
+    return _search_page(
+        request, user, flow="transition", query=request.query_params.get("q", ""),
+    )
+
+
+@app.get("/offboard", response_class=HTMLResponse)
+async def offboard_get(request: Request, user: dict = Depends(require_user)):
+    return _search_page(
+        request, user, flow="offboard", query=request.query_params.get("q", ""),
+    )
+
+
+@app.get("/transition/blank")
+async def transition_blank(request: Request, user: dict = Depends(require_user)):
+    _begin_flow(request.session, "transition")
+    return RedirectResponse(url="/step/1", status_code=303)
+
+
+@app.get("/offboard/blank")
+async def offboard_blank(request: Request, user: dict = Depends(require_user)):
+    _begin_flow(request.session, "offboard")
+    return RedirectResponse(url="/step/1", status_code=303)
+
+
+@app.post("/requests/{employee_id}/load")
+async def load_employee_request(
+    employee_id: str,
+    request: Request,
+    user: dict = Depends(require_user),
+):
+    form = await request.form()
+    flow = form.get("flow", "transition")
+    if flow not in ("transition", "offboard"):
+        flow = "transition"
+
+    row = get_employee(employee_id)
+    if row is None or not _can_access_employee(user, row):
+        return _search_page(
+            request,
+            user,
+            flow=flow,
+            query="",
+            error="Employee not found, or you do not have access to that record.",
+        )
+
+    _begin_flow(request.session, flow, employee_id=employee_id)
+    apply_payload_to_session(request.session, row.get("payload") or {})
+    step1 = dict(request.session.get("step1") or {})
+    step1["manager_name"] = _requester_name(user)
+    request.session["step1"] = step1
     return RedirectResponse(url="/step/1", status_code=303)
 
 
 @app.get("/step/1", response_class=HTMLResponse)
 async def step1_get(request: Request, user: dict = Depends(require_user)):
+    if not request.session.get("flow"):
+        request.session["flow"] = "onboard"
     data = dict(request.session.get("step1") or {})
     data["manager_name"] = _requester_name(user)
     return templates.TemplateResponse(request, "step1_info.html", _ctx(request, {
         "roles": list(get_presets().keys()),
         "data": data,
+        "flow": _session_flow(request.session),
         "current_step": 1,
         "total_steps": TOTAL_STEPS,
     }))
@@ -459,35 +650,52 @@ async def confirmation_get(request: Request, user: dict = Depends(require_user))
 async def submit_form(request: Request, user: dict = Depends(require_user)):
     if not request.session.get("step1"):
         return RedirectResponse(url="/step/1")
+    flow = _session_flow(request.session)
+    employee_id = request.session.get("employee_id")
     final = build_final_json(request.session)
     employee_name = f"{final['employee']['first_name']} {final['employee']['last_name']}"
-    email_ok, error = send_it_checklist(final)
+    email_ok, error = send_it_checklist(final, flow=flow)
     persisted = False
     if email_ok:
         try:
-            upsert_employee(
-                username=user.get("username", ""),
-                display=_requester_name(user),
-                payload=final,
-            )
-            persisted = True
+            if flow == "offboard":
+                if employee_id:
+                    delete_employee(employee_id)
+                persisted = True
+            else:
+                upsert_employee(
+                    username=user.get("username", ""),
+                    display=_requester_name(user),
+                    payload=final,
+                    employee_id=employee_id,
+                )
+                persisted = True
             _clear_wizard(request.session)
         except Exception:
             log.exception(
-                "Email sent but failed to persist employee inventory for %s",
+                "Email sent but failed to update employee inventory for %s (%s)",
                 employee_name,
+                flow,
             )
-            error = (
-                "The IT checklist email was sent, but saving this employee to "
-                "inventory failed. Your form answers are still in this session — "
-                "try again from confirmation, or contact IT if this keeps happening."
-            )
+            if flow == "offboard":
+                error = (
+                    "The offboarding email was sent, but removing this employee from "
+                    "inventory failed. Your form answers are still in this session — "
+                    "try again from confirmation."
+                )
+            else:
+                error = (
+                    "The IT checklist email was sent, but saving this employee to "
+                    "inventory failed. Your form answers are still in this session — "
+                    "try again from confirmation, or contact IT if this keeps happening."
+                )
     success = email_ok and persisted
     return templates.TemplateResponse(request, "submitted.html", _ctx(request, {
         "success": success,
         "email_sent": email_ok,
         "error": error,
         "employee_name": employee_name,
+        "flow": flow,
     }))
 
 

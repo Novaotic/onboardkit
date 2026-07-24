@@ -171,7 +171,7 @@ def _it_team_recipients(raw: str) -> list[str]:
     return [p.strip() for p in re.split(r"[,;]+", raw) if p.strip()]
 
 
-def send_it_checklist(data: dict) -> tuple[bool, str]:
+def send_it_checklist(data: dict, flow: str = "onboard") -> tuple[bool, str]:
     branding = get_branding()
     smtp_host = os.getenv("SMTP_HOST", "")
     smtp_port = int(os.getenv("SMTP_PORT", "587"))
@@ -188,8 +188,19 @@ def send_it_checklist(data: dict) -> tuple[bool, str]:
     full_name = f"{emp.get('first_name', '')} {emp.get('last_name', '')}".strip()
     title = emp.get("title", "")
     start = emp.get("start_date", "TBD")
-    prefix = branding.get("email_subject_prefix", "New Hire IT Request")
-    subject = f"{prefix}: {full_name} ({title}) — Start {start}"
+    default_prefix = branding.get("email_subject_prefix", "New Hire IT Request")
+    flow_prefixes = {
+        "onboard": default_prefix,
+        "transition": "Role Transition IT Request",
+        "offboard": "Offboarding IT Request",
+    }
+    prefix = flow_prefixes.get(flow, default_prefix)
+    if flow == "offboard":
+        subject = f"{prefix}: {full_name} ({title})"
+    elif flow == "transition":
+        subject = f"{prefix}: {full_name} ({title})"
+    else:
+        subject = f"{prefix}: {full_name} ({title}) — Start {start}"
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject

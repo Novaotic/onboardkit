@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 from config_store import get_config, get_offices, get_preset_flags, template_context
 from deps import get_session_user, require_admin
 from paths import TEMPLATES_DIR
+from employee_store import list_all_employees, search_employees
 from preset_store import get_presets, save_presets
 from preset_validation import validate_presets
 
@@ -94,6 +95,20 @@ async def admin_index(request: Request, _: dict = Depends(require_admin)):
         "presets": presets,
         "preset_flags": get_preset_flags(),
     }))
+
+
+@router.get("/employees", response_class=HTMLResponse)
+async def admin_employees(request: Request, _: dict = Depends(require_admin)):
+    query = (request.query_params.get("q") or "").strip()
+    if query:
+        employees = search_employees(query, username="", is_admin=True)
+    else:
+        employees = list_all_employees()
+    return templates.TemplateResponse(
+        request,
+        "admin/employees.html",
+        _admin_ctx(request, {"employees": employees, "query": query}),
+    )
 
 
 @router.get("/new", response_class=HTMLResponse)

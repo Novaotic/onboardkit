@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Active Employees — Admin</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .admin-header {
+      background: #1e3a5f;
+      color: #fff;
+      padding: 0 1.5rem;
+    }
+    .admin-header__inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .admin-header__brand {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .admin-header__nav {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+    .admin-header__nav a {
+      color: rgba(255,255,255,.75);
+      text-decoration: none;
+      font-size: .875rem;
+    }
+    .admin-header__nav a:hover { color: #fff; }
+    .admin-header__nav .btn-logout {
+      background: none;
+      border: 1px solid rgba(255,255,255,.35);
+      color: rgba(255,255,255,.75);
+      font-size: .8rem;
+      padding: .25rem .65rem;
+      border-radius: 4px;
+      cursor: pointer;
+      line-height: 1.5;
+    }
+    .admin-header__nav .btn-logout:hover {
+      border-color: rgba(255,255,255,.7);
+      color: #fff;
+    }
+    .admin-main {
+      max-width: 1100px;
+      margin: 2rem auto 4rem;
+      padding: 0 1.5rem;
+    }
+    .page-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+    .page-title { font-size: 1.4rem; font-weight: 700; margin: 0; }
+    .page-lead {
+      color: var(--gray-600);
+      margin: 0 0 1.25rem;
+      max-width: 40rem;
+      line-height: 1.5;
+    }
+    .search-inline {
+      display: flex;
+      gap: .5rem;
+      align-items: center;
+    }
+    .search-inline input {
+      min-width: 16rem;
+      padding: .5rem .75rem;
+      border: 1px solid var(--gray-300);
+      border-radius: var(--radius);
+    }
+    .preset-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+    .preset-table th {
+      background: var(--gray-50);
+      padding: .75rem 1.25rem;
+      text-align: left;
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--gray-500);
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .preset-table td {
+      padding: .9rem 1.25rem;
+      border-bottom: 1px solid var(--gray-100);
+      vertical-align: middle;
+      font-size: .9rem;
+    }
+    .preset-table tr:last-child td { border-bottom: none; }
+    .preset-table tr:hover td { background: var(--gray-50); }
+    .action-cell { white-space: nowrap; }
+    .action-cell form { display: inline; margin-right: .35rem; }
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--gray-500);
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+    }
+    .muted { color: var(--gray-500); font-size: .85rem; }
+  </style>
+</head>
+<body>
+
+<header class="admin-header">
+  <div class="admin-header__inner">
+    <div class="admin-header__brand">Active Employee Inventory</div>
+    <nav class="admin-header__nav">
+      <a href="/admin/">Presets</a>
+      <a href="/admin/employees">Employees</a>
+      <a href="/">&#8592; Portal</a>
+      <form method="post" action="/logout" style="margin:0">
+        <button type="submit" class="btn-logout">Sign out</button>
+      </form>
+    </nav>
+  </div>
+</header>
+
+<main class="admin-main">
+  <div class="page-title-row">
+    <h1 class="page-title">Active Employees</h1>
+    <form method="get" action="/admin/employees" class="search-inline">
+      <input type="search" name="q" value="{{ query }}" placeholder="Filter by name or title" autocomplete="off">
+      <button type="submit" class="btn btn--primary">Filter</button>
+    </form>
+  </div>
+  <p class="page-lead">
+    Global roster for Portal Admins. When an admin submits a transition, ownership
+    flips to that admin — use this page to find employees frontline managers no longer see.
+  </p>
+
+  {% if employees %}
+  <table class="preset-table">
+    <thead>
+      <tr>
+        <th>Employee</th>
+        <th>Title</th>
+        <th>Owner</th>
+        <th>Updated</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in employees %}
+      <tr>
+        <td><strong>{{ row.employee_first }} {{ row.employee_last }}</strong></td>
+        <td>{{ row.employee_title or "—" }}</td>
+        <td>
+          {{ row.requested_by_display or row.requested_by_username }}
+          <div class="muted">{{ row.requested_by_username }}</div>
+        </td>
+        <td class="muted">{{ row.updated_at }}</td>
+        <td class="action-cell">
+          <form method="post" action="/requests/{{ row.id }}/load">
+            <input type="hidden" name="flow" value="transition">
+            <button type="submit" class="btn btn--secondary">Transition</button>
+          </form>
+          <form method="post" action="/requests/{{ row.id }}/load">
+            <input type="hidden" name="flow" value="offboard">
+            <button type="submit" class="btn btn--secondary">Offboard</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <p>{% if query %}No employees match that filter.{% else %}No active employees in inventory yet.{% endif %}</p>
+  </div>
+  {% endif %}
+</main>
+
+</body>
+</html>

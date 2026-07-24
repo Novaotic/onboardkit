@@ -539,6 +539,124 @@ input[type="radio"], input[type="checkbox"] {
   max-width: 28rem;
   margin: 0 auto;
   line-height: 1.45;
+  text-align: center;
+}
+
+.home-actions {
+  display: grid;
+  gap: .85rem;
+  margin: 0 auto 0.5rem;
+  max-width: 40rem;
+}
+@media (min-width: 720px) {
+  .home-actions {
+    grid-template-columns: repeat(3, 1fr);
+    max-width: none;
+  }
+}
+.home-action {
+  display: block;
+  text-align: left;
+  text-decoration: none;
+  color: inherit;
+  padding: 1.1rem 1.15rem;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  background: var(--gray-50);
+  transition: border-color .15s ease, background .15s ease;
+}
+.home-action:hover {
+  border-color: var(--primary, #2563eb);
+  background: #fff;
+}
+.home-action__title {
+  display: block;
+  font-size: 1.05rem;
+  color: var(--gray-900);
+  margin-bottom: .35rem;
+}
+.home-action__sub {
+  display: block;
+  font-size: .82rem;
+  color: var(--gray-500);
+  line-height: 1.4;
+}
+
+.search-page__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 .5rem;
+}
+.search-page__lead {
+  color: var(--gray-600);
+  margin: 0 0 1.25rem;
+  line-height: 1.5;
+  max-width: 38rem;
+}
+.form-error {
+  background: var(--danger-light, #fef2f2);
+  color: var(--danger, #b91c1c);
+  border: 1px solid #fecaca;
+  border-radius: var(--radius);
+  padding: .75rem 1rem;
+  margin: 0 0 1rem;
+  font-size: .9rem;
+}
+.search-form {
+  margin-bottom: 1.25rem;
+}
+.search-form__row {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+.search-form__row .form-input {
+  flex: 1 1 14rem;
+}
+.search-results__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.search-results__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: .9rem 1rem;
+  border-bottom: 1px solid var(--gray-100);
+}
+.search-results__item:last-child { border-bottom: none; }
+.search-results__title,
+.search-results__owner {
+  display: block;
+  font-size: .82rem;
+  color: var(--gray-500);
+  margin-top: .2rem;
+}
+.search-results__empty {
+  color: var(--gray-500);
+  margin: 0 0 1rem;
+}
+.search-page__blank {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--gray-200);
+}
+.search-page__blank p {
+  margin: 0 0 .75rem;
+  color: var(--gray-600);
+  font-size: .9rem;
+}
+.search-page__back {
+  margin-top: 1.5rem;
+  font-size: .9rem;
+}
+.search-page__back a {
+  color: var(--gray-600);
 }
 
 .home-points {

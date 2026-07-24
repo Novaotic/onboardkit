@@ -34,11 +34,15 @@ def test_clear_wizard_preserves_auth_session():
         "user": {"username": "pat", "is_admin": False},
         "step1": {"first_name": "A"},
         "step2": {"office": "HQ"},
+        "flow": "transition",
+        "employee_id": "abc",
     }
     _clear_wizard(session)
     assert session["user"]["username"] == "pat"
     assert "step1" not in session
     assert "step2" not in session
+    assert "flow" not in session
+    assert "employee_id" not in session
 
 
 def test_unauthenticated_portal_redirects_to_login(client):
@@ -76,7 +80,7 @@ def test_login_success_and_home_access(client, env_auth):
 
     home = client.get("/", follow_redirects=False)
     assert home.status_code == 200
-    assert "New Hire" in home.text
+    assert "New hire" in home.text or "IT Request" in home.text
 
 
 def test_admin_access_for_env_fallback_admin(authed_client):

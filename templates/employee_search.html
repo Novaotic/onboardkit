@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="search-page">
+  <h1 class="search-page__title">{{ page_title }}</h1>
+  <p class="search-page__lead">{{ page_lead }}</p>
+
+  {% if error %}
+  <p class="form-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  <form method="get" action="/{{ flow }}" class="search-form">
+    <label class="form-label" for="q">Search by name or title</label>
+    <div class="search-form__row">
+      <input
+        id="q"
+        name="q"
+        type="search"
+        class="form-input"
+        value="{{ query }}"
+        placeholder="e.g. Jane Doe or Nurse"
+        autocomplete="off"
+      >
+      <button type="submit" class="btn btn--primary">Search</button>
+    </div>
+  </form>
+
+  {% if query %}
+  <div class="search-results">
+    {% if results %}
+    <ul class="search-results__list">
+      {% for row in results %}
+      <li class="search-results__item">
+        <div class="search-results__meta">
+          <strong>{{ row.employee_first }} {{ row.employee_last }}</strong>
+          {% if row.employee_title %}
+          <span class="search-results__title">{{ row.employee_title }}</span>
+          {% endif %}
+          <span class="search-results__owner">
+            Owner: {{ row.requested_by_display or row.requested_by_username }}
+          </span>
+        </div>
+        <form method="post" action="/requests/{{ row.id }}/load">
+          <input type="hidden" name="flow" value="{{ flow }}">
+          <button type="submit" class="btn btn--secondary">Use this record</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="search-results__empty">No matching employees in your inventory.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="search-page__blank">
+    <p>Starting without a prior record?</p>
+    <a class="btn btn--primary" href="{{ blank_url }}">Start blank form</a>
+  </div>
+
+  <p class="search-page__back"><a href="/">&#8592; Back to home</a></p>
+</div>
+{% endblock %}

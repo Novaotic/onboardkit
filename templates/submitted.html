@@ -7,10 +7,17 @@
     <div class="submitted-icon submitted-icon--success">&#10003;</div>
     <h1 class="submitted-title">Request Sent!</h1>
     <p class="submitted-body">
+      {% if flow == "offboard" %}
+      The offboarding checklist for <strong>{{ employee_name }}</strong> has been emailed to {{ it_team_label }}.
+      They have been removed from the active inventory.
+      {% elif flow == "transition" %}
+      The role transition checklist for <strong>{{ employee_name }}</strong> has been emailed to {{ it_team_label }}.
+      {% else %}
       The IT checklist for <strong>{{ employee_name }}</strong> has been emailed to {{ it_team_label }}.
       They will follow up with any questions.
+      {% endif %}
     </p>
-    <a href="/start" class="btn btn--primary" style="margin-top:2rem">Start a New Request</a>
+    <a href="/" class="btn btn--primary" style="margin-top:2rem">Back to home</a>
   {% elif email_sent %}
     <div class="submitted-icon submitted-icon--error">&#9888;</div>
     <h1 class="submitted-title">Email Sent, Inventory Not Saved</h1>
