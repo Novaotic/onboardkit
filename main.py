@@ -388,8 +388,9 @@ def _search_page(
             "No match? Start a blank form and use a role preset to fill defaults."
         ),
         "offboard": (
-            "Search employees you previously submitted. Admins can search everyone. "
-            "No match? Start a blank form describing their current access to revoke."
+            "Search employees you previously submitted, then confirm what to revoke. "
+            "Admins can search everyone. Offboarding requires an existing inventory "
+            "record — use Transition first if they are not in the system yet."
         ),
     }
     return templates.TemplateResponse(request, "employee_search.html", _ctx(request, {
@@ -400,6 +401,7 @@ def _search_page(
         "results": results,
         "error": error,
         "blank_url": f"/{flow}/blank",
+        "allow_blank": flow != "offboard",
     }))
 
 
@@ -425,8 +427,17 @@ async def transition_blank(request: Request, user: dict = Depends(require_user))
 
 @app.get("/offboard/blank")
 async def offboard_blank(request: Request, user: dict = Depends(require_user)):
-    _begin_flow(request.session, "offboard")
-    return RedirectResponse(url="/step/1", status_code=303)
+    """Blank offboard is not allowed — inventory record required for deletion."""
+    return _search_page(
+        request,
+        user,
+        flow="offboard",
+        query="",
+        error=(
+            "Offboarding requires an existing employee record. Search for the "
+            "employee above, or use Role Transition to add them to inventory first."
+        ),
+    )
 
 
 @app.post("/requests/{employee_id}/load")
@@ -634,6 +645,8 @@ async def step6_post(request: Request, user: dict = Depends(require_user)):
 async def confirmation_get(request: Request, user: dict = Depends(require_user)):
     if not request.session.get("step1"):
         return RedirectResponse(url="/step/1")
+    if _session_flow(request.session) == "offboard" and not request.session.get("employee_id"):
+        return RedirectResponse(url="/offboard", status_code=303)
     final = build_final_json(request.session)
     return templates.TemplateResponse(request, "confirmation.html", _ctx(request, {
         "json_data": json.dumps(final, indent=2),
@@ -641,6 +654,7 @@ async def confirmation_get(request: Request, user: dict = Depends(require_user))
         "software_labels": get_option_labels("software"),
         "portal_labels": get_option_labels("portals"),
         "mailbox_labels": get_option_labels("mailboxes"),
+        "flow": _session_flow(request.session),
         "current_step": 7,
         "total_steps": TOTAL_STEPS,
     }))
@@ -654,13 +668,33 @@ async def submit_form(request: Request, user: dict = Depends(require_user)):
     employee_id = request.session.get("employee_id")
     final = build_final_json(request.session)
     employee_name = f"{final['employee']['first_name']} {final['employee']['last_name']}"
+
+    if flow == "offboard" and not employee_id:
+        return templates.TemplateResponse(request, "submitted.html", _ctx(request, {
+            "success": False,
+            "email_sent": False,
+            "blocked": True,
+            "error": (
+                "Offboarding requires an existing inventory record. Go back to "
+                "Offboarding, search for the employee, and use that record."
+            ),
+            "employee_name": employee_name,
+            "flow": flow,
+            "removed_from_inventory": False,
+        }))
+
     email_ok, error = send_it_checklist(final, flow=flow)
     persisted = False
+    removed_from_inventory = False
     if email_ok:
         try:
             if flow == "offboard":
-                if employee_id:
-                    delete_employee(employee_id)
+                row = get_employee(employee_id)
+                if row is None or not _can_access_employee(user, row):
+                    raise RuntimeError("Employee record missing or access denied")
+                if not delete_employee(employee_id):
+                    raise RuntimeError("Employee record was not deleted")
+                removed_from_inventory = True
                 persisted = True
             else:
                 upsert_employee(
@@ -693,9 +727,11 @@ async def submit_form(request: Request, user: dict = Depends(require_user)):
     return templates.TemplateResponse(request, "submitted.html", _ctx(request, {
         "success": success,
         "email_sent": email_ok,
+        "blocked": False,
         "error": error,
         "employee_name": employee_name,
         "flow": flow,
+        "removed_from_inventory": removed_from_inventory,
     }))
 
 

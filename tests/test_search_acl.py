@@ -195,3 +195,10 @@ def test_blank_transition_sets_flow(authed_client):
     resp = authed_client.get("/transition/blank", follow_redirects=False)
     assert resp.status_code == 303
     assert resp.headers["location"] == "/step/1"
+
+
+def test_offboard_blank_rejected(authed_client):
+    resp = authed_client.get("/offboard/blank", follow_redirects=False)
+    assert resp.status_code == 200
+    assert "requires an existing" in resp.text.lower()
+    assert 'href="/offboard/blank"' not in resp.text

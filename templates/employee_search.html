@@ -54,10 +54,20 @@
   </div>
   {% endif %}
 
+  {% if allow_blank %}
   <div class="search-page__blank">
     <p>Starting without a prior record?</p>
     <a class="btn btn--primary" href="{{ blank_url }}">Start blank form</a>
   </div>
+  {% elif flow == "offboard" %}
+  <div class="search-page__blank">
+    <p>
+      Offboarding requires an inventory record. If this person is missing, add them
+      via <a href="/transition">Role Transition</a> (blank form + role preset) first,
+      then return here to offboard.
+    </p>
+  </div>
+  {% endif %}
 
   <p class="search-page__back"><a href="/">&#8592; Back to home</a></p>
 </div>

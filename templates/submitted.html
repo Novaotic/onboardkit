@@ -9,7 +9,9 @@
     <p class="submitted-body">
       {% if flow == "offboard" %}
       The offboarding checklist for <strong>{{ employee_name }}</strong> has been emailed to {{ it_team_label }}.
+      {% if removed_from_inventory %}
       They have been removed from the active inventory.
+      {% endif %}
       {% elif flow == "transition" %}
       The role transition checklist for <strong>{{ employee_name }}</strong> has been emailed to {{ it_team_label }}.
       {% else %}
@@ -30,6 +32,13 @@
     <pre class="error-detail">{{ error }}</pre>
     {% endif %}
     <a href="/confirmation" class="btn btn--primary" style="margin-top:2rem">Back to confirmation</a>
+  {% elif blocked %}
+    <div class="submitted-icon submitted-icon--error">&#9888;</div>
+    <h1 class="submitted-title">Offboard Not Allowed</h1>
+    <p class="submitted-body">
+      {{ error }}
+    </p>
+    <a href="/offboard" class="btn btn--primary" style="margin-top:2rem">Back to offboarding search</a>
   {% else %}
     <div class="submitted-icon submitted-icon--error">&#9888;</div>
     <h1 class="submitted-title">Email Not Sent</h1>

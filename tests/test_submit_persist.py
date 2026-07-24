@@ -131,3 +131,80 @@ def test_second_onboard_same_name_upserts_for_owner(authed_client, monkeypatch):
     hits = search_employees("casey", username="testadmin", is_admin=False)
     assert len(hits) == 1
     assert len(list_all_employees()) == 1
+
+
+def test_offboard_without_employee_id_is_blocked(authed_client, monkeypatch):
+    """Offboard without a loaded inventory row must not email or claim deletion."""
+    sent = {"called": False}
+
+    def _send(_final, **_kwargs):
+        sent["called"] = True
+        return True, None
+
+    monkeypatch.setattr("main.send_it_checklist", _send)
+    _fill_minimal_wizard(authed_client)
+    monkeypatch.setattr("main._session_flow", lambda _session: "offboard")
+
+    response = authed_client.post("/submit", follow_redirects=False)
+    assert response.status_code == 200
+    assert "Offboard Not Allowed" in response.text
+    assert "removed from the active inventory" not in response.text.lower()
+    assert sent["called"] is False
+    assert list_all_employees() == []
+
+    monkeypatch.undo()
+    step1 = authed_client.get("/step/1", follow_redirects=False)
+    assert step1.status_code == 200
+    assert "Casey" in step1.text
+
+
+def test_confirmation_blocks_offboard_without_employee_id(authed_client, monkeypatch):
+    _fill_minimal_wizard(authed_client)
+    monkeypatch.setattr("main._session_flow", lambda _session: "offboard")
+    confirm = authed_client.get("/confirmation", follow_redirects=False)
+    assert confirm.status_code in (302, 303, 307)
+    assert "/offboard" in confirm.headers["location"]
+
+
+def test_offboard_with_employee_id_deletes_row(authed_client, monkeypatch):
+    from employee_store import get_employee, init_db, upsert_employee
+
+    monkeypatch.setattr(
+        "main.send_it_checklist",
+        lambda _final, **_kwargs: (True, None),
+    )
+    init_db()
+    row_id = upsert_employee(
+        username="testadmin",
+        display="testadmin",
+        payload={
+            "submitted_at": "2026-01-01T00:00:00",
+            "requested_by": "testadmin",
+            "employee": {
+                "first_name": "Leaving",
+                "middle_name": "",
+                "last_name": "Soon",
+                "preferred_name": "",
+                "credentials": "",
+                "title": "Analyst",
+                "start_date": "2026-01-01",
+            },
+            "location": {"office": "HQ", "area": ""},
+            "hardware": {},
+            "access": {},
+            "email_groups": {},
+            "security": {},
+        },
+    )
+    load = authed_client.post(
+        f"/requests/{row_id}/load",
+        data={"flow": "offboard"},
+        follow_redirects=False,
+    )
+    assert load.status_code == 303
+
+    response = authed_client.post("/submit", follow_redirects=False)
+    assert response.status_code == 200
+    assert "Request Sent!" in response.text
+    assert "removed from the active inventory" in response.text.lower()
+    assert get_employee(row_id) is None
