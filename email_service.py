@@ -44,7 +44,7 @@ def _section(title: str, rows: str) -> str:
     )
 
 
-def build_html_email(data: dict) -> str:
+def build_html_email(data: dict, flow: str = "onboard") -> str:
     branding = get_branding()
     hardware_labels = get_option_labels("hardware")
     software_labels = get_option_labels("software")
@@ -85,10 +85,16 @@ def build_html_email(data: dict) -> str:
     if sec.get("alarm_code") and sec.get("alarm_facilities"):
         alarm_note = " — " + ", ".join(f.replace("_", " ").title() for f in sec["alarm_facilities"])
 
+    date_label = {
+        "offboard": "Last Day / Effective",
+        "transition": "Effective Date",
+        "onboard": "Start Date",
+    }.get(flow, "Start Date")
+
     employee_rows = (
         _row("Full Name", f"{full_name}{preferred}{credentials}") +
         _row("Title", title) +
-        _row("Start Date", start)
+        _row(date_label, start)
     )
     if emp.get("is_student_or_resident") is not None:
         employee_rows += _row("Student / Resident", _yn(emp.get("is_student_or_resident")))
@@ -102,11 +108,48 @@ def build_html_email(data: dict) -> str:
         _row("Area", loc.get("area") or "—")
     ))
 
+    if flow == "offboard":
+        hw_title = "Hardware to Collect / Return"
+        access_title = "Access to Revoke"
+        groups_title = "Groups &amp; Mailboxes to Remove"
+        security_title = "Security Access to Revoke"
+        header_bg = "#b45309"
+        header_title = "Offboarding IT Request"
+        banner = (
+            "<div style='padding:14px 32px;background:#fffbeb;border-bottom:1px solid #fde68a;"
+            "color:#92400e;font-size:13px;line-height:1.45'>"
+            "<strong>Action required:</strong> Revoke the access below and collect listed hardware. "
+            "Treat unchecked items as not in scope unless noted elsewhere."
+            "</div>"
+        )
+    elif flow == "transition":
+        hw_title = "Target Hardware"
+        access_title = "Target Access &amp; Software"
+        groups_title = "Target Email Groups &amp; Mailboxes"
+        security_title = "Target Security"
+        header_bg = "#1d4ed8"
+        header_title = "Role Transition IT Request"
+        banner = (
+            "<div style='padding:14px 32px;background:#eff6ff;border-bottom:1px solid #bfdbfe;"
+            "color:#1e3a8a;font-size:13px;line-height:1.45'>"
+            "<strong>Target state:</strong> Converge this employee to the role and access listed below. "
+            "Add, keep, or remove items as needed to match this checklist."
+            "</div>"
+        )
+    else:
+        hw_title = "Hardware"
+        access_title = "Access &amp; Software"
+        groups_title = "Email Groups &amp; Mailboxes"
+        security_title = "Security"
+        header_bg = "#2563eb"
+        header_title = branding.get("email_subject_prefix", "New Hire IT Request")
+        banner = ""
+
     hardware_rows = _row("Needs Computer", _yn(hw.get("needs_computer")))
     if hw.get("needs_computer"):
         hardware_rows += _row("Computer / Monitors", hw_main)
         hardware_rows += _row("Peripherals", hw_peripherals)
-    hardware_section = _section("Hardware", hardware_rows)
+    hardware_section = _section(hw_title, hardware_rows)
 
     access_rows = (
         _row("Email Access", _yn(acc.get("needs_email"))) +
@@ -119,7 +162,7 @@ def build_html_email(data: dict) -> str:
         _row("Mobile Access", _yn(acc.get("mobile_access"))) +
         _row("Network Printers", acc.get("network_printers") or "—")
     )
-    access_section = _section("Access &amp; Software", access_rows)
+    access_section = _section(access_title, access_rows)
 
     groups_rows = (
         _row("Email Groups", eg.get("groups") or "—") +
@@ -127,15 +170,14 @@ def build_html_email(data: dict) -> str:
         followup_row +
         _row("Fax Numbers", eg.get("fax_numbers") or "—")
     )
-    groups_section = _section("Email Groups &amp; Mailboxes", groups_rows)
+    groups_section = _section(groups_title, groups_rows)
 
-    security_section = _section("Security", (
+    security_section = _section(security_title, (
         _row("Alarm Code", (_yn(True) + alarm_note) if sec.get("alarm_code") else _yn(False)) +
         _row("Gate Access", _yn(sec.get("gate_access")))
     ))
 
     submitted_at = data.get("submitted_at", "")[:10]
-    subject_prefix = branding.get("email_subject_prefix", "New Hire IT Request")
 
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
@@ -144,13 +186,14 @@ def build_html_email(data: dict) -> str:
 <body style="margin:0;padding:20px;background:#f7fafc;font-family:Arial,sans-serif;font-size:14px;color:#2d3748">
 <div style="max-width:680px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)">
 
-  <div style="background:#2563eb;color:#fff;padding:24px 32px">
-    <h1 style="margin:0 0 4px;font-size:20px">{subject_prefix}</h1>
+  <div style="background:{header_bg};color:#fff;padding:24px 32px">
+    <h1 style="margin:0 0 4px;font-size:20px">{header_title}</h1>
     <p style="margin:0;opacity:.85;font-size:13px">
       Submitted {submitted_at} &nbsp;&middot;&nbsp; Requested by <strong>{data.get('requested_by', '')}</strong>
     </p>
   </div>
 
+  {banner}
   {employee_section}
   {location_section}
   {hardware_section}
@@ -206,7 +249,7 @@ def send_it_checklist(data: dict, flow: str = "onboard") -> tuple[bool, str]:
     msg["Subject"] = subject
     msg["From"] = smtp_from
     msg["To"] = ", ".join(recipients)
-    msg.attach(MIMEText(build_html_email(data), "html"))
+    msg.attach(MIMEText(build_html_email(data, flow=flow), "html"))
 
     try:
         with smtplib.SMTP(smtp_host, smtp_port) as server:

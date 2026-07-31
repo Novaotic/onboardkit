@@ -659,6 +659,27 @@ input[type="radio"], input[type="checkbox"] {
   color: var(--gray-600);
 }
 
+.flow-banner {
+  display: inline-block;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: .35rem .65rem;
+  border-radius: 4px;
+  margin: 0 0 .75rem;
+}
+.flow-banner--offboard {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+.flow-banner--transition {
+  background: #eff6ff;
+  color: #1e3a8a;
+  border: 1px solid #bfdbfe;
+}
+
 .home-points {
   list-style: none;
   margin: 1.75rem 0 0;

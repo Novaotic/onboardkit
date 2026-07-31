@@ -1,13 +1,34 @@
 {% extends "base.html" %}
-{% block title %}Review Request{% endblock %}
+{% block title %}
+  {% if flow == "offboard" %}Review Offboarding
+  {% elif flow == "transition" %}Review Transition
+  {% else %}Review Request
+  {% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="card__header">
+  {% if flow == "offboard" %}
+  <p class="flow-banner flow-banner--offboard">Offboarding — confirm what {{ it_team_label }} should revoke and collect</p>
+  <h1 class="card__title">Review Offboarding Checklist</h1>
+  <p class="card__subtitle">
+    Items below will be sent as a <strong>revoke / return</strong> checklist.
+    Edit any step if the inventory record is outdated, then send to {{ it_team_label }}.
+  </p>
+  {% elif flow == "transition" %}
+  <p class="flow-banner flow-banner--transition">Role transition — this is the <strong>target</strong> state for IT</p>
+  <h1 class="card__title">Review Transition Checklist</h1>
+  <p class="card__subtitle">
+    Confirm the new role and access. Selecting a role preset earlier fills defaults —
+    adjust anything that should differ, then send to {{ it_team_label }}.
+  </p>
+  {% else %}
   <h1 class="card__title">Review &amp; Submit</h1>
   <p class="card__subtitle">
     Please review the request below. Click <strong>Send to {{ it_team_label }}</strong> when everything looks correct.
     You can go back to any step by clicking the <strong>Back</strong> button.
   </p>
+  {% endif %}
 </div>
 
 {% set emp = final.employee %}
@@ -16,6 +37,11 @@
 {% set acc = final.access %}
 {% set eg  = final.email_groups %}
 {% set sec = final.security %}
+{% set date_label = "Last Day / Effective" if flow == "offboard" else ("Effective Date" if flow == "transition" else "Start Date") %}
+{% set hw_heading = "Hardware to Collect" if flow == "offboard" else ("Target Hardware" if flow == "transition" else "Hardware") %}
+{% set access_heading = "Access to Revoke" if flow == "offboard" else ("Target Software & Access" if flow == "transition" else "Software & Access") %}
+{% set groups_heading = "Groups to Remove" if flow == "offboard" else ("Target Groups & Fax" if flow == "transition" else "Groups & Fax") %}
+{% set security_heading = "Security to Revoke" if flow == "offboard" else ("Target Security" if flow == "transition" else "Security") %}
 
 <div class="review-grid">
 
@@ -32,7 +58,7 @@
           {% if emp.credentials %}, {{ emp.credentials }}{% endif %}
       </dd>
       <dt>Title</dt><dd>{{ emp.title }}</dd>
-      <dt>Start Date</dt><dd>{{ emp.start_date }}</dd>
+      <dt>{{ date_label }}</dt><dd>{{ emp.start_date }}</dd>
       <dt>Requested By</dt><dd>{{ final.requested_by }}</dd>
       {% if emp.is_student_or_resident is defined %}
       <dt>{{ employee_fields.student_or_resident.label }}</dt><dd>{{ "Yes" if emp.is_student_or_resident else "No" }}</dd>
@@ -58,7 +84,7 @@
   <div class="review-section">
     <div class="review-section__header">
       <span class="review-section__icon">&#128187;</span>
-      <h2>Hardware</h2>
+      <h2>{{ hw_heading }}</h2>
       <a href="/step/3" class="review-edit-link">Edit</a>
     </div>
     <dl class="review-dl">
@@ -79,7 +105,7 @@
   <div class="review-section">
     <div class="review-section__header">
       <span class="review-section__icon">&#128290;</span>
-      <h2>Software &amp; Access</h2>
+      <h2>{{ access_heading }}</h2>
       <a href="/step/4" class="review-edit-link">Edit</a>
     </div>
     <dl class="review-dl">
@@ -105,7 +131,7 @@
   <div class="review-section">
     <div class="review-section__header">
       <span class="review-section__icon">&#128231;</span>
-      <h2>Groups &amp; Fax</h2>
+      <h2>{{ groups_heading }}</h2>
       <a href="/step/5" class="review-edit-link">Edit</a>
     </div>
     <dl class="review-dl">
@@ -126,7 +152,7 @@
   <div class="review-section">
     <div class="review-section__header">
       <span class="review-section__icon">&#128274;</span>
-      <h2>Security</h2>
+      <h2>{{ security_heading }}</h2>
       <a href="/step/6" class="review-edit-link">Edit</a>
     </div>
     <dl class="review-dl">
@@ -151,7 +177,13 @@
   <div class="form-nav form-nav--submit">
     <a href="/step/6" class="btn btn--secondary">&#8592; Back</a>
     <button type="submit" class="btn btn--success btn--large">
+      {% if flow == "offboard" %}
+      &#9993; Send offboarding to {{ it_team_label }}
+      {% elif flow == "transition" %}
+      &#9993; Send transition to {{ it_team_label }}
+      {% else %}
       &#9993; Send to {{ it_team_label }}
+      {% endif %}
     </button>
   </div>
 </form>

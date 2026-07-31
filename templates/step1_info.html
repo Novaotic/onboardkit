@@ -3,8 +3,24 @@
 
 {% block content %}
 <div class="card__header">
+  {% if flow == "offboard" %}
+  <p class="flow-banner flow-banner--offboard">Offboarding checklist</p>
+  <h1 class="card__title">Employee Information</h1>
+  <p class="card__subtitle">
+    Confirm identity and last day. Later steps list what {{ it_team_label }} should revoke and collect —
+    edit anything that does not match reality.
+  </p>
+  {% elif flow == "transition" %}
+  <p class="flow-banner flow-banner--transition">Role transition</p>
+  <h1 class="card__title">Employee Information</h1>
+  <p class="card__subtitle">
+    Update the employee’s details and select their <strong>new role</strong>.
+    The role preset fills hardware, software, and groups on later steps — adjust before sending.
+  </p>
+  {% else %}
   <h1 class="card__title">Employee Information</h1>
   <p class="card__subtitle">Enter the new hire's details and select their role. The role drives automatic access recommendations on later steps.</p>
+  {% endif %}
 </div>
 
 <form method="post" action="/step/1" id="step1Form">
@@ -42,7 +58,12 @@
 
   <div class="form-row form-row--2">
     <div class="form-group form-group--required">
-      <label for="start_date">Start Date</label>
+      <label for="start_date">
+        {% if flow == "offboard" %}Last Day / Effective Date
+        {% elif flow == "transition" %}Effective Date
+        {% else %}Start Date
+        {% endif %}
+      </label>
       <input type="date" id="start_date" name="start_date"
              value="{{ data.get('start_date', '') }}" required>
     </div>
@@ -58,7 +79,12 @@
 
   <div class="form-row form-row--2">
     <div class="form-group form-group--required">
-      <label for="title">Job Role / Title</label>
+      <label for="title">
+        {% if flow == "transition" %}New Job Role / Title
+        {% elif flow == "offboard" %}Current Job Role / Title
+        {% else %}Job Role / Title
+        {% endif %}
+      </label>
       <select id="title" name="title" required>
         <option value="" disabled {% if not data.get('title') %}selected{% endif %}>— Select a role —</option>
         {% for role in roles %}

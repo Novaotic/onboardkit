@@ -91,6 +91,7 @@ TOTAL_STEPS = 6
 def _ctx(request: Request, extra: dict | None = None) -> dict:
     ctx = template_context()
     ctx["user"] = get_session_user(request)
+    ctx["flow"] = _session_flow(request.session)
     if extra:
         ctx.update(extra)
     return ctx
