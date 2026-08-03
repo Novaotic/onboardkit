@@ -46,6 +46,11 @@ def test_sqlite_paths_under_app_data_dir():
     assert DB_FILE.parent == DATA_DIR
 
 
+def test_data_dir_is_gitignored():
+    gitignore = (APP_DIR / ".gitignore").read_text(encoding="utf-8")
+    assert "data/" in gitignore
+
+
 def test_env_file_lives_beside_app(tmp_path, monkeypatch):
     """ENV_FILE is anchored to APP_DIR, independent of process CWD."""
     assert ENV_FILE.parent == APP_DIR

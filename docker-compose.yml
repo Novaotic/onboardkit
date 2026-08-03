@@ -18,6 +18,10 @@ services:
       # Must match group DNs in ldap/bootstrap/50-onboardkit.ldif
       LDAP_USERS_GROUP: cn=Portal Users,ou=groups,dc=example,dc=org
       LDAP_ADMIN_GROUP: cn=Portal Admin,ou=groups,dc=example,dc=org
+    volumes:
+      # SQLite inventory + WAL sidecars (.db-wal / .db-shm). The process must be
+      # able to create and delete files in this directory, not only write the .db.
+      - ./data:/app/data
     depends_on:
       ldap-server:
         condition: service_healthy

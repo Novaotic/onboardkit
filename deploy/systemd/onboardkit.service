@@ -4,7 +4,10 @@
 #   sudo systemctl enable --now onboardkit
 #
 # App reads .env from WorkingDirectory via python-dotenv (load_dotenv in main.py).
-# Run as a dedicated unprivileged user; ensure that user owns the app dir and can write presets.json and config.json.
+# Run as a dedicated unprivileged user; ensure that user owns the app dir and can
+# write presets.json, config.json, and the data/ directory (SQLite + WAL sidecars
+# onboardkit.db-wal / onboardkit.db-shm — create and delete rights on data/, not
+# only write access to the .db file).
 
 [Unit]
 Description=OnboardKit (FastAPI / Uvicorn)
